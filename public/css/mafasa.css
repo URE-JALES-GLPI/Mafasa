@@ -4,8 +4,10 @@
  */
 
 :root {
-    --mf-blue: #1a73b5;
-    --mf-indigo: #4f46e5;
+    --mf-blue: #0079bf; /* azul de ação do padrão URE (Tralla) */
+    --mf-blue-strong: #026aa7;
+    --mf-blue-soft: #e4f0f6;
+    --mf-indigo: #0079bf;
     --mf-gray: #6b7280;
     --mf-border: #d1d5db;
     --mf-bg: #f8fafc;
@@ -166,8 +168,9 @@
 .mf-field input:focus,
 .mf-field select:focus,
 .mf-btn:focus {
-    outline: 2px solid var(--mf-indigo);
-    outline-offset: 1px;
+    outline: none;
+    border-color: var(--mf-blue);
+    box-shadow: 0 0 0 3px var(--mf-blue-soft);
 }
 
 .mf-actions {
@@ -202,8 +205,9 @@
 }
 
 .mf-btn-primary:hover {
+    background: var(--mf-blue-strong);
+    border-color: var(--mf-blue-strong);
     color: #fff;
-    filter: brightness(1.05);
 }
 
 .mf-btn-sm {
