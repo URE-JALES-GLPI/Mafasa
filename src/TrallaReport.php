@@ -337,6 +337,11 @@ class TrallaReport
     private static function buildWhere(array $params): string
     {
         $sql = 'WHERE c.`stage` = 1 AND c.`is_deleted` = 0 AND c.`is_archived` = 0';
+        global $DB;
+        if ($DB->fieldExists('glpi_plugin_tralla_cards', 'is_draft')) {
+            // Rascunhos do Tralla ainda não foram publicados: ficam fora do relatório.
+            $sql .= ' AND c.`is_draft` = 0';
+        }
         $boards = array_keys(self::boardChoices());
         $sql .= $boards === [] ? ' AND 1=0' : ' AND c.`plugin_tralla_boards_id` IN (' . implode(',', array_map('intval', $boards)) . ')';
         if (function_exists('mafasa_entity_sql')) {
