@@ -235,6 +235,14 @@ class Report extends \CommonGLPI
             'page'  => $base . '/front/tickets.php',
             'icon'  => 'ti ti-ticket',
         ];
+        // Relatórios dos quadros do Tralla (apenas com o Tralla ativo).
+        if (TrallaReport::isReady()) {
+            $menu['options']['tralla_boards'] = [
+                'title' => 'Quadros Tralla',
+                'page'  => $base . '/front/boards.php?source=tralla',
+                'icon'  => 'ti ti-layout-kanban',
+            ];
+        }
         // Relatórios de quadros Kanpro (apenas quando o Kanpro está instalado).
         if (BoardsReport::available() && BoardsReport::canView()) {
             $menu['options']['boards'] = [

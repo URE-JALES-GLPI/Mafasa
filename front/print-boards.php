@@ -3,7 +3,7 @@
  * Impressão do relatório dos quadros Kanpro.
  *
  * Recebe os mesmos GET da tela boards.php. view=lista (padrão) imprime a
- * tabela de cartões até BoardsReport::PRINT_LIMIT; view=resumo imprime a
+ * tabela de cartões até $report::PRINT_LIMIT; view=resumo imprime a
  * tabela agregada do modo escolhido (mode=).
  */
 
@@ -13,20 +13,26 @@ require_once __DIR__ . '/../src/Config.php';
 
 use GlpiPlugin\Mafasa\BoardsReport;
 use GlpiPlugin\Mafasa\Config as MafasaConfig;
+use GlpiPlugin\Mafasa\TrallaReport;
 
 Session::checkLoginUser();
 
-if (!BoardsReport::canView()) {
-    mafasa_display_right_error(__('Você não tem permissão para visualizar quadros Kanpro.', 'mafasa'));
+// Fonte do relatório: quadros do Kanpro (padrão) ou do Tralla (?source=tralla).
+$source = (($_GET['source'] ?? '') === 'tralla') ? 'tralla' : 'kanpro';
+$report = $source === 'tralla' ? TrallaReport::class : BoardsReport::class;
+$sourceLabel = $source === 'tralla' ? 'Tralla' : 'Kanpro';
+
+if (!$report::canView()) {
+    mafasa_display_right_error(sprintf(__('Você não tem permissão para visualizar quadros %s.', 'mafasa'), $sourceLabel));
     return;
 }
 
-$available = BoardsReport::available();
+$available = $report::available();
 $view = (($_GET['view'] ?? 'lista') === 'resumo') ? 'resumo' : 'lista';
-$filters = BoardsReport::getFilters();
-$columns = BoardsReport::getColumns();
-$defaultCols = BoardsReport::getDefaultColumns();
-$modes = BoardsReport::getSummaryModes();
+$filters = $report::getFilters();
+$columns = $report::getColumns();
+$defaultCols = $report::getDefaultColumns();
+$modes = $report::getSummaryModes();
 
 // ---- Colunas (mesma lógica da tela) ----
 $requestedCols = (array)($_GET['cols'] ?? []);
@@ -48,12 +54,12 @@ if ($view === 'resumo') {
     if (!isset($modes[$mode])) {
         $mode = 'board';
     }
-    $result = BoardsReport::buildSummary($mode, $_GET);
+    $result = $report::buildSummary($mode, $_GET);
 } else {
     $mode = null;
     $sort = (string)($_GET['sort'] ?? 'id');
     $order = (strtoupper((string)($_GET['order'] ?? 'ASC')) === 'DESC') ? 'DESC' : 'ASC';
-    $result = BoardsReport::buildList($_GET, 1, BoardsReport::PRINT_LIMIT, $sort, $order);
+    $result = $report::buildList($_GET, 1, $report::PRINT_LIMIT, $sort, $order);
 }
 
 $total     = ($view === 'resumo')
@@ -62,7 +68,7 @@ $total     = ($view === 'resumo')
 $rows      = (isset($result['rows']) && is_array($result['rows'])) ? $result['rows'] : [];
 $totals    = (isset($result['totals']) && is_array($result['totals'])) ? $result['totals'] : [];
 $error     = $result['error'] ?? null;
-$truncated = ($view !== 'resumo' && $total > BoardsReport::PRINT_LIMIT);
+$truncated = ($view !== 'resumo' && $total > $report::PRINT_LIMIT);
 
 // ---- Branding / metadados ----
 $logoUrl     = MafasaConfig::getLogoUrl();
@@ -85,7 +91,7 @@ foreach ($filters as $key => $def) {
         continue;
     }
     $label = (string)($def['label'] ?? $key);
-    $filterSummary[] = $label . ': ' . BoardsReport::describeFilterValue($key, $raw);
+    $filterSummary[] = $label . ': ' . $report::describeFilterValue($key, $raw);
 }
 
 /** Escapa texto para HTML. */
@@ -97,7 +103,8 @@ function mf_pbrd_esc($value): string
 /** Formata o valor da célula `$row['mf_'.$key']` conforme getColumnKind(). */
 function mf_pbrd_cell(string $key, $value): string
 {
-    $kind = BoardsReport::getColumnKind($key);
+    $reportClass = (($_GET['source'] ?? '') === 'tralla') ? TrallaReport::class : BoardsReport::class;
+    $kind = $reportClass::getColumnKind($key);
 
     if ($kind === 'bool') {
         if ($value === null || $value === '') {
@@ -129,8 +136,8 @@ if (is_file($cssPath)) {
 }
 $backQs = http_build_query($_GET);
 $pageTitle = ($view === 'resumo')
-    ? __('[URE] Mafasa — Quadros (Resumo)', 'mafasa')
-    : __('[URE] Mafasa — Quadros', 'mafasa');
+    ? sprintf(__('[URE] Mafasa — Quadros %s (Resumo)', 'mafasa'), $sourceLabel)
+    : sprintf(__('[URE] Mafasa — Quadros %s', 'mafasa'), $sourceLabel);
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -179,7 +186,7 @@ $pageTitle = ($view === 'resumo')
 
 <?php if ($truncated && empty($error)) { ?>
     <div class="mf-print-warning" role="alert">
-        <?php echo mf_pbrd_esc(sprintf(__('Exibindo os primeiros %d de %d registros — refine os filtros.', 'mafasa'), (int)BoardsReport::PRINT_LIMIT, $total)); ?>
+        <?php echo mf_pbrd_esc(sprintf(__('Exibindo os primeiros %d de %d registros — refine os filtros.', 'mafasa'), (int)$report::PRINT_LIMIT, $total)); ?>
     </div>
 <?php } ?>
 
@@ -256,7 +263,7 @@ $pageTitle = ($view === 'resumo')
 
 <footer class="mf-print-footer">
     <span><?php echo mf_pbrd_esc($footerText); ?></span>
-    <span><?php echo mf_pbrd_esc(sprintf(__('%d registro(s)', 'mafasa'), $total)); ?><?php echo $truncated ? mf_pbrd_esc(sprintf(__(' (primeiros %d exibidos)', 'mafasa'), (int)BoardsReport::PRINT_LIMIT)) : ''; ?></span>
+    <span><?php echo mf_pbrd_esc(sprintf(__('%d registro(s)', 'mafasa'), $total)); ?><?php echo $truncated ? mf_pbrd_esc(sprintf(__(' (primeiros %d exibidos)', 'mafasa'), (int)$report::PRINT_LIMIT)) : ''; ?></span>
 </footer>
 </body>
 </html>

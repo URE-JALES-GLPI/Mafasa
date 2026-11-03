@@ -1,6 +1,6 @@
 <?php
 /**
- * Tela de relatório dos quadros Kanpro.
+ * Tela de relatório dos quadros Kanpro ou do Tralla (?source=tralla).
  *
  * Duas visões via GET view= (lista|resumo):
  * - lista: filtros + colunas desmarcáveis + tabela paginada de cartões.
@@ -14,20 +14,26 @@ include('../../../inc/includes.php');
 require_once __DIR__ . '/../src/compat.php';
 
 use GlpiPlugin\Mafasa\BoardsReport;
+use GlpiPlugin\Mafasa\TrallaReport;
 
 Session::checkLoginUser();
 
-if (!BoardsReport::canView()) {
-    mafasa_display_right_error(__('Você não tem permissão para visualizar quadros Kanpro.', 'mafasa'));
+// Fonte do relatório: quadros do Kanpro (padrão) ou do Tralla (?source=tralla).
+$source = (($_GET['source'] ?? '') === 'tralla') ? 'tralla' : 'kanpro';
+$report = $source === 'tralla' ? TrallaReport::class : BoardsReport::class;
+$sourceLabel = $source === 'tralla' ? 'Tralla' : 'Kanpro';
+
+if (!$report::canView()) {
+    mafasa_display_right_error(sprintf(__('Você não tem permissão para visualizar quadros %s.', 'mafasa'), $sourceLabel));
     return;
 }
 
 $view = (($_GET['view'] ?? 'lista') === 'resumo') ? 'resumo' : 'lista';
-$available = BoardsReport::available();
-$filters = BoardsReport::getFilters();
-$columns = BoardsReport::getColumns();
-$defaultCols = BoardsReport::getDefaultColumns();
-$modes = BoardsReport::getSummaryModes();
+$available = $report::available();
+$filters = $report::getFilters();
+$columns = $report::getColumns();
+$defaultCols = $report::getDefaultColumns();
+$modes = $report::getSummaryModes();
 
 /** Escapa texto para HTML. */
 function mf_brd_esc($value): string
@@ -51,7 +57,8 @@ function mf_brd_qs(array $extra = [], array $drop = []): string
 /** Formata valor de célula $row['mf_'.$key] conforme getColumnKind(). */
 function mf_brd_cell(string $key, $value): string
 {
-    $kind = BoardsReport::getColumnKind($key);
+    $reportClass = (($_GET['source'] ?? '') === 'tralla') ? TrallaReport::class : BoardsReport::class;
+    $kind = $reportClass::getColumnKind($key);
 
     if ($kind === 'bool') {
         if ($value === null || $value === '') {
@@ -97,13 +104,13 @@ $order = (strtoupper((string)($_GET['order'] ?? 'ASC')) === 'DESC') ? 'DESC' : '
 $page = max(1, (int)($_GET['page'] ?? 1));
 
 if ($view === 'lista') {
-    $result = BoardsReport::buildList($_GET, $page, BoardsReport::PAGE_SIZE, $sort, $order);
+    $result = $report::buildList($_GET, $page, $report::PAGE_SIZE, $sort, $order);
 } else {
     $mode = (string)($_GET['mode'] ?? 'board');
     if (!isset($modes[$mode])) {
         $mode = 'board';
     }
-    $result = BoardsReport::buildSummary($mode, $_GET);
+    $result = $report::buildSummary($mode, $_GET);
 }
 
 Html::header(
@@ -119,7 +126,7 @@ echo "<link rel='stylesheet' href='" . mf_brd_esc($webdir . '/public/css/mafasa.
 
 echo "<div class='mf-page'>";
 echo "<div class='mf-page-header'>";
-echo "<h2>" . mf_brd_esc(__('Relatório de Quadros (Kanpro)', 'mafasa')) . "</h2>";
+echo "<h2>" . mf_brd_esc(sprintf(__('Relatório de Quadros (%s)', 'mafasa'), $sourceLabel)) . "</h2>";
 echo "</div>";
 
 // ---- Navegação entre relatórios ----
@@ -132,13 +139,21 @@ if (class_exists('Ticket') && Ticket::canView()) {
     echo "<a class='mf-btn' href='" . mf_brd_esc($webdir . '/front/tickets.php') . "'>"
         . mf_brd_esc(__('Chamados', 'mafasa')) . "</a>";
 }
-echo "<a class='mf-btn mf-btn-primary' href='" . mf_brd_esc($webdir . '/front/boards.php') . "'>"
-    . mf_brd_esc(__('Quadros Kanpro', 'mafasa')) . "</a>";
+if (TrallaReport::isReady()) {
+    echo "<a class='mf-btn" . ($source === 'tralla' ? ' mf-btn-primary' : '') . "' href='" . mf_brd_esc($webdir . '/front/boards.php?source=tralla') . "'>"
+        . mf_brd_esc(__('Quadros Tralla', 'mafasa')) . "</a>";
+}
+if (BoardsReport::isReady()) {
+    echo "<a class='mf-btn" . ($source === 'kanpro' ? ' mf-btn-primary' : '') . "' href='" . mf_brd_esc($webdir . '/front/boards.php') . "'>"
+        . mf_brd_esc(__('Quadros Kanpro', 'mafasa')) . "</a>";
+}
 echo "</div>";
 
 if (!$available) {
     echo "<div class='mf-warning' role='alert'>"
-        . mf_brd_esc(__('O plugin Kanpro não está instalado (tabelas de quadros ausentes). Os relatórios de quadros ficam indisponíveis.', 'mafasa'))
+        . mf_brd_esc($source === 'tralla'
+            ? __('O plugin Tralla não está ativo. O relatório de quadros do Tralla fica indisponível.', 'mafasa')
+            : __('O plugin Kanpro não está instalado (tabelas de quadros ausentes). Os relatórios de quadros ficam indisponíveis.', 'mafasa'))
         . "</div>";
     echo "</div>";
     Html::footer();
@@ -157,6 +172,9 @@ echo "</div>";
 
 echo "<form id='mf-form' method='get'>";
 echo "<input type='hidden' name='view' value='" . mf_brd_esc($view) . "'>";
+if ($source === 'tralla') {
+    echo "<input type='hidden' name='source' value='tralla'>";
+}
 
 // ---- Filtros ----
 echo "<fieldset class='mf-filter-group'><legend>" . mf_brd_esc(__('Filtros', 'mafasa')) . "</legend>";
@@ -229,7 +247,7 @@ if ($view === 'lista') {
 // ---- Ações ----
 echo "<div class='mf-actions'>";
 echo "<button type='submit' class='mf-btn mf-btn-primary'>" . mf_brd_esc(__('Gerar relatório', 'mafasa')) . "</button>";
-echo "<a class='mf-btn' href='boards.php'>" . mf_brd_esc(__('Limpar filtros', 'mafasa')) . "</a>";
+echo "<a class='mf-btn' href='boards.php" . ($source === 'tralla' ? '?source=tralla' : '') . "'>" . mf_brd_esc(__('Limpar filtros', 'mafasa')) . "</a>";
 echo "<button type='button' id='mf-copy-link' class='mf-btn'>" . mf_brd_esc(__('Copiar link', 'mafasa')) . "</button>";
 echo "<a id='mf-print-link' class='mf-btn' target='_blank' data-print='print-boards.php' href='print-boards.php?"
     . mf_brd_esc(mf_brd_qs([], ['page'])) . "'>" . mf_brd_esc(__('Imprimir', 'mafasa')) . "</a>";

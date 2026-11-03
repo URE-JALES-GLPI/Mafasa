@@ -140,6 +140,10 @@ if (\GlpiPlugin\Mafasa\Report::canView()) {
 }
 echo "<a class='mf-btn mf-btn-primary' href='" . mf_tix_esc($webdir . '/front/tickets.php') . "'>"
     . mf_tix_esc(__('Chamados', 'mafasa')) . "</a>";
+if (\GlpiPlugin\Mafasa\TrallaReport::isReady()) {
+    echo "<a class='mf-btn' href='" . mf_tix_esc($webdir . '/front/boards.php?source=tralla') . "'>"
+        . mf_tix_esc(__('Quadros Tralla', 'mafasa')) . "</a>";
+}
 if (BoardsReport::available() && BoardsReport::canView()) {
     echo "<a class='mf-btn' href='" . mf_tix_esc($webdir . '/front/boards.php') . "'>"
         . mf_tix_esc(__('Quadros Kanpro', 'mafasa')) . "</a>";
