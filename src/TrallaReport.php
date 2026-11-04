@@ -3,8 +3,7 @@
  * Relatórios dos quadros do Tralla — cards por quadro/lista/técnico, situação,
  * prioridade, SLA e vínculo com chamados GLPI.
  *
- * Mesma interface de BoardsReport (as telas boards.php e print-boards.php usam
- * uma ou outra conforme ?source=tralla). Somente SELECT; mostra só os quadros
+ * Usado pelas telas boards.php e print-boards.php. Somente SELECT; mostra só os quadros
  * que o usuário vê no Tralla e respeita o filtro de entidades do Mafasa.
  *
  * Compat: GLPI 12.0.0–12.0.99, PHP >= 8.2.

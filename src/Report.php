@@ -239,14 +239,6 @@ class Report extends \CommonGLPI
         if (TrallaReport::isReady()) {
             $menu['options']['tralla_boards'] = [
                 'title' => 'Quadros Tralla',
-                'page'  => $base . '/front/boards.php?source=tralla',
-                'icon'  => 'ti ti-layout-kanban',
-            ];
-        }
-        // Relatórios de quadros Kanpro (apenas quando o Kanpro está instalado).
-        if (BoardsReport::available() && BoardsReport::canView()) {
-            $menu['options']['boards'] = [
-                'title' => 'Quadros Kanpro',
                 'page'  => $base . '/front/boards.php',
                 'icon'  => 'ti ti-layout-kanban',
             ];

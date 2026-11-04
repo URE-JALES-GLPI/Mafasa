@@ -1,7 +1,7 @@
 # [URE] Mafasa — Relatórios de Ativos, Chamados, Quadros e Entidades
 
 Plugin GLPI (compat 12.0.0–12.0.99, PHP >= 8.2) para relatórios de ativos por
-categoria, de chamados GLPI e de quadros Kanpro, com filtros totais, colunas
+categoria, de chamados GLPI e de quadros Tralla, com filtros totais, colunas
 desmarcáveis, resumos agregados e impressão/PDF com cabeçalho institucional
 (URE Jales).
 
@@ -18,7 +18,7 @@ desmarcáveis, resumos agregados e impressão/PDF com cabeçalho institucional
 ```
 mafasa.xml, setup.php, hook.php, composer.json
 src/compat.php, src/Install.php, src/Report.php, src/Config.php
-src/TicketsReport.php, src/BoardsReport.php, src/EntitiesReport.php
+src/TicketsReport.php, src/TrallaReport.php, src/EntitiesReport.php
 front/report.php, front/print.php, front/config.php
 front/tickets.php, front/print-tickets.php
 front/boards.php, front/print-boards.php
@@ -45,8 +45,8 @@ Ferramentas → Relatórios não aparece e as telas respondem "sem permissão".
 - **Ativos** (`front/report.php`): multi-tipo, filtros, colunas desmarcáveis.
 - **Chamados** (`front/tickets.php`): lista detalhada + resumos agregados
   (status, tipo, prioridade, técnico, mês etc. com tempos médios).
-- **Quadros Kanpro** (`front/boards.php`): cartões por quadro/lista/membro,
-  prazos, checklists e vínculo com chamados. Requer o plugin Kanpro instalado.
+- **Quadros Tralla** (`front/boards.php`): cartões por quadro/lista/membro,
+  prazos, checklists e vínculo com chamados. Requer o plugin Tralla ativo.
 - **Diversos** (`front/diversos.php`): lista os nomes das entidades do GLPI e
   permite baixar um CSV completo com ID, nome e nome completo. Respeita as
   entidades visíveis no contexto ativo do usuário; quem pode visualizar todas
@@ -54,4 +54,4 @@ Ferramentas → Relatórios não aparece e as telas respondem "sem permissão".
 
 ## Status
 
-v1.2.0 — ver `docs/superpowers/specs/2026-10-19-relatorios-chamados-quadros-design.md`.
+v1.3.1 — relatórios de Ativos, Chamados, Quadros Tralla e Diversos.

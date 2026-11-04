@@ -12,7 +12,6 @@ include('../../../inc/includes.php');
 require_once __DIR__ . '/../src/compat.php';
 
 use GlpiPlugin\Mafasa\TicketsReport;
-use GlpiPlugin\Mafasa\BoardsReport;
 
 Session::checkLoginUser();
 
@@ -125,7 +124,7 @@ Html::header(
 
 $webdir = mafasa_web_dir('mafasa');
 
-echo "<link rel='stylesheet' href='" . mf_tix_esc($webdir . '/public/css/mafasa.css') . "'>";
+echo "<link rel='stylesheet' href='" . mf_tix_esc($webdir . '/public/css/mafasa.css?v=' . PLUGIN_MAFASA_VERSION) . "'>";
 
 echo "<div class='mf-page'>";
 echo "<div class='mf-page-header'>";
@@ -141,12 +140,8 @@ if (\GlpiPlugin\Mafasa\Report::canView()) {
 echo "<a class='mf-btn mf-btn-primary' href='" . mf_tix_esc($webdir . '/front/tickets.php') . "'>"
     . mf_tix_esc(__('Chamados', 'mafasa')) . "</a>";
 if (\GlpiPlugin\Mafasa\TrallaReport::isReady()) {
-    echo "<a class='mf-btn' href='" . mf_tix_esc($webdir . '/front/boards.php?source=tralla') . "'>"
-        . mf_tix_esc(__('Quadros Tralla', 'mafasa')) . "</a>";
-}
-if (BoardsReport::available() && BoardsReport::canView()) {
     echo "<a class='mf-btn' href='" . mf_tix_esc($webdir . '/front/boards.php') . "'>"
-        . mf_tix_esc(__('Quadros Kanpro', 'mafasa')) . "</a>";
+        . mf_tix_esc(__('Quadros Tralla', 'mafasa')) . "</a>";
 }
 echo "<a class='mf-btn' href='" . mf_tix_esc($webdir . '/front/diversos.php') . "'>"
     . mf_tix_esc(__('Diversos', 'mafasa')) . "</a>";

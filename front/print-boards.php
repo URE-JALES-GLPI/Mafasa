@@ -1,6 +1,6 @@
 <?php
 /**
- * Impressão do relatório dos quadros Kanpro.
+ * Impressão do relatório dos quadros Tralla.
  *
  * Recebe os mesmos GET da tela boards.php. view=lista (padrão) imprime a
  * tabela de cartões até $report::PRINT_LIMIT; view=resumo imprime a
@@ -11,19 +11,15 @@ include('../../../inc/includes.php');
 require_once __DIR__ . '/../src/compat.php';
 require_once __DIR__ . '/../src/Config.php';
 
-use GlpiPlugin\Mafasa\BoardsReport;
 use GlpiPlugin\Mafasa\Config as MafasaConfig;
 use GlpiPlugin\Mafasa\TrallaReport;
 
 Session::checkLoginUser();
 
-// Fonte do relatório: quadros do Kanpro (padrão) ou do Tralla (?source=tralla).
-$source = (($_GET['source'] ?? '') === 'tralla') ? 'tralla' : 'kanpro';
-$report = $source === 'tralla' ? TrallaReport::class : BoardsReport::class;
-$sourceLabel = $source === 'tralla' ? 'Tralla' : 'Kanpro';
+$report = TrallaReport::class;
 
 if (!$report::canView()) {
-    mafasa_display_right_error(sprintf(__('Você não tem permissão para visualizar quadros %s.', 'mafasa'), $sourceLabel));
+    mafasa_display_right_error(__('Você não tem permissão para visualizar quadros Tralla.', 'mafasa'));
     return;
 }
 
@@ -48,7 +44,7 @@ foreach (array_keys($columns) as $colKey) {
     }
 }
 
-// ---- Busca (mesmos GET da tela; guard retorna erro quando Kanpro ausente) ----
+// ---- Busca (mesmos GET da tela) ----
 if ($view === 'resumo') {
     $mode = (string)($_GET['mode'] ?? 'board');
     if (!isset($modes[$mode])) {
@@ -103,8 +99,7 @@ function mf_pbrd_esc($value): string
 /** Formata o valor da célula `$row['mf_'.$key']` conforme getColumnKind(). */
 function mf_pbrd_cell(string $key, $value): string
 {
-    $reportClass = (($_GET['source'] ?? '') === 'tralla') ? TrallaReport::class : BoardsReport::class;
-    $kind = $reportClass::getColumnKind($key);
+    $kind = TrallaReport::getColumnKind($key);
 
     if ($kind === 'bool') {
         if ($value === null || $value === '') {
@@ -136,8 +131,8 @@ if (is_file($cssPath)) {
 }
 $backQs = http_build_query($_GET);
 $pageTitle = ($view === 'resumo')
-    ? sprintf(__('[URE] Mafasa — Quadros %s (Resumo)', 'mafasa'), $sourceLabel)
-    : sprintf(__('[URE] Mafasa — Quadros %s', 'mafasa'), $sourceLabel);
+    ? __('[URE] Mafasa — Quadros Tralla (Resumo)', 'mafasa')
+    : __('[URE] Mafasa — Quadros Tralla', 'mafasa');
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">

@@ -36,23 +36,6 @@ class TicketsReport
         }
     }
 
-    /**
-     * O plugin Kanpro (quadros) está instalado com as tabelas necessárias?
-     */
-    public static function kanproAvailable(): bool
-    {
-        global $DB;
-        if (!isset($DB) || !is_object($DB) || !method_exists($DB, 'tableExists')) {
-            return false;
-        }
-        try {
-            return $DB->tableExists('glpi_plugin_kanpro_boards')
-                && $DB->tableExists('glpi_plugin_kanpro_cards');
-        } catch (\Throwable $e) {
-            return false;
-        }
-    }
-
     // ------------------------------------------------------------------
     // Mapas de rótulos
     // ------------------------------------------------------------------
@@ -116,9 +99,6 @@ class TicketsReport
         $out['users_id'] = ['label' => 'Solicitante', 'kind' => 'dropdown', 'dropdown' => 'User'];
         $out['users_id_tech'] = ['label' => 'Técnico', 'kind' => 'dropdown', 'dropdown' => 'User'];
         $out['groups_id'] = ['label' => 'Grupo atribuído', 'kind' => 'dropdown', 'dropdown' => 'Group'];
-        if (self::kanproAvailable()) {
-            $out['boards_id'] = self::choiceFilter('Quadro Kanpro', self::boardChoices());
-        }
         $out['name'] = ['label' => 'Assunto', 'kind' => 'text'];
         $out['date_creation_from'] = ['label' => 'Abertura (de)', 'kind' => 'date'];
         $out['date_creation_to'] = ['label' => 'Abertura (até)', 'kind' => 'date'];
@@ -502,10 +482,6 @@ class TicketsReport
             }
             return self::priorityLabels()[(int) $value] ?? $value;
         }
-        if ($key === 'boards_id') {
-            $choices = self::boardChoices();
-            return $choices[(int) $value] ?? $value;
-        }
         if (in_array($key, ['itilcategories_id'], true)) {
             return self::lookupName('glpi_itilcategories', (int) $value) ?: $value;
         }
@@ -559,15 +535,6 @@ class TicketsReport
                 if (isset($map[$key])) {
                     [$col, $op, $val] = $map[$key];
                     $sql .= ' AND ' . $col . ' ' . $op . ' ' . self::quote($val);
-                }
-                continue;
-            }
-
-            if ($key === 'boards_id') {
-                $id = (int) $value;
-                if ($id > 0 && self::kanproAvailable()) {
-                    $sql .= ' AND EXISTS (SELECT 1 FROM `glpi_plugin_kanpro_cards` kc'
-                        . ' WHERE kc.`tickets_id` = t.`id` AND kc.`plugin_kanpro_boards_id` = ' . $id . ')';
                 }
                 continue;
             }
@@ -695,34 +662,6 @@ class TicketsReport
             'elapsed'             => 'mf_elapsed',
         ];
         return $map[$sort] ?? 't.`id`';
-    }
-
-    /**
-     * @return array<int,string>
-     */
-    private static function boardChoices(): array
-    {
-        global $DB;
-        $out = [];
-        if (!isset($DB) || !is_object($DB) || !method_exists($DB, 'request')) {
-            return $out;
-        }
-        try {
-            $it = $DB->request([
-                'SELECT' => ['id', 'name'],
-                'FROM'   => 'glpi_plugin_kanpro_boards',
-                'WHERE'  => ['is_archived' => 0],
-                'ORDER'  => ['name ASC', 'id ASC'],
-            ]);
-            foreach ($it as $row) {
-                if (is_array($row)) {
-                    $out[(int) $row['id']] = (string) $row['name'];
-                }
-            }
-        } catch (\Throwable $e) {
-            return [];
-        }
-        return $out;
     }
 
     /**

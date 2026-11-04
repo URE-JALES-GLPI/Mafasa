@@ -81,7 +81,7 @@ class Profile extends \Profile
         return [
             [
                 'itemtype' => self::class,
-                'label'    => 'Acesso aos relatórios (Ativos, Chamados, Quadros e Diversos)',
+                'label'    => 'Acesso aos relatórios (Ativos, Chamados, Quadros Tralla e Diversos)',
                 'field'    => self::rightName(),
                 'rights'   => [$read => 'Sim'],
             ],
