@@ -10,9 +10,11 @@
 include('../../../inc/includes.php');
 require_once __DIR__ . '/../src/compat.php';
 require_once __DIR__ . '/../src/Config.php';
+require_once __DIR__ . '/../src/PdfExport.php';
 
 use GlpiPlugin\Mafasa\Report;
 use GlpiPlugin\Mafasa\Config as MafasaConfig;
+use GlpiPlugin\Mafasa\PdfExport;
 
 Session::checkLoginUser();
 
@@ -113,6 +115,30 @@ if (is_file($cssPath)) {
 }
 $backQs = http_build_query($_GET);
 $pageTitle = ($headerTitle !== '') ? $headerTitle : __('Relatório de Ativos', 'mafasa');
+if (($_GET['format'] ?? '') === 'pdf') {
+    if ($error) {
+        http_response_code(500);
+        echo mf_print_esc((string) $error);
+        return;
+    }
+    $pdfRows = [];
+    foreach ($rows as $row) {
+        $pdfRow = [];
+        foreach ($orderedCols as $key) {
+            $pdfRow[] = html_entity_decode(mf_print_cell($key, $row['mf_' . $key] ?? null), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        }
+        $pdfRows[] = $pdfRow;
+    }
+    $details = [sprintf(__('Gerado em %s', 'mafasa'), $generatedAt),
+        sprintf(__('%d registro(s)', 'mafasa'), $total)];
+    $details[] = $filterSummary === [] ? __('Filtros: nenhum', 'mafasa')
+        : __('Filtros', 'mafasa') . ': ' . implode(' | ', $filterSummary);
+    if ($truncated) {
+        $details[] = sprintf(__('Exibindo os primeiros %d de %d registros.', 'mafasa'), Report::PRINT_LIMIT, $total);
+    }
+    PdfExport::download('relatorio-ativos.pdf', $pageTitle, array_values(array_intersect_key($columns, array_flip($orderedCols))), $pdfRows, $details, $footerText);
+    return;
+}
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">

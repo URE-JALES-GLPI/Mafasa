@@ -18,7 +18,7 @@ desmarcáveis, resumos agregados e impressão/PDF com cabeçalho institucional
 ```
 mafasa.xml, setup.php, hook.php, composer.json
 src/compat.php, src/Install.php, src/Report.php, src/Config.php
-src/TicketsReport.php, src/TrallaReport.php, src/EntitiesReport.php
+src/TicketsReport.php, src/TrallaReport.php, src/EntitiesReport.php, src/PdfExport.php
 front/report.php, front/print.php, front/config.php
 front/tickets.php, front/print-tickets.php
 front/boards.php, front/print-boards.php
@@ -48,10 +48,14 @@ Ferramentas → Indicadores não aparece e as telas respondem "sem permissão".
 - **Quadros Tralla** (`front/boards.php`): cartões por quadro/lista/membro,
   prazos, checklists e vínculo com chamados. Requer o plugin Tralla ativo.
 - **Diversos** (`front/diversos.php`): lista os nomes das entidades do GLPI e
-  permite baixar um CSV completo com ID, nome e nome completo. Respeita as
+  permite baixar um CSV ou PDF completo com ID, nome e nome completo. Respeita as
   entidades visíveis no contexto ativo do usuário; quem pode visualizar todas
   recebe todas as entidades cadastradas.
 
+Os relatórios de Ativos, Chamados e Quadros Tralla têm a ação **Baixar PDF**.
+Ela usa os filtros, a visão e as colunas selecionadas. O PDF segue o limite de
+5.000 registros usado pela impressão e informa quando o resultado foi truncado.
+
 ## Status
 
-v1.3.2 — relatórios de Ativos, Chamados, Quadros Tralla e Diversos.
+v1.3.3 — download em PDF para todos os relatórios.

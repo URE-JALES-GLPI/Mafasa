@@ -3,7 +3,7 @@
  * - Tipos: checkbox mestre (#mf-types-all) com estado indeterminado.
  * - Colunas: sincroniza input[name="cols[]"] e esconde th/td via data-col.
  * - Copiar link compartilha filtros + types[] + cols[] (URL do form).
- * - Link de impressão sincronizado com os mesmos parâmetros.
+ * - Links de impressão e PDF sincronizados com os mesmos parâmetros.
  * - Select2 nos selects de filtro (quando a lib está disponível).
  */
 (function () {
@@ -46,15 +46,18 @@
   }
 
   function syncPrintLink() {
-    var print = document.getElementById('mf-print-link');
-    if (!print) return;
-    try {
-      var shared = new URL(currentShareUrl(), window.location.href);
-      var target = print.getAttribute('data-print') || 'print.php';
-      print.setAttribute('href', target + '?' + shared.searchParams.toString());
-    } catch (e) {
-      /* mantém link original */
-    }
+    ['mf-print-link', 'mf-pdf-link'].forEach(function (id) {
+      var link = document.getElementById(id);
+      if (!link) return;
+      try {
+        var shared = new URL(currentShareUrl(), window.location.href);
+        if (id === 'mf-pdf-link') shared.searchParams.set('format', 'pdf');
+        var target = link.getAttribute('data-print') || 'print.php';
+        link.setAttribute('href', target + '?' + shared.searchParams.toString());
+      } catch (e) {
+        /* mantém link original */
+      }
+    });
   }
 
   function typesBoxes() {
@@ -85,6 +88,11 @@
   }
 
   document.addEventListener('DOMContentLoaded', function () {
+    var form = document.getElementById('mf-form');
+    if (form) {
+      form.addEventListener('input', syncPrintLink);
+      form.addEventListener('change', syncPrintLink);
+    }
     document.querySelectorAll('input[name="cols[]"]').forEach(function (el) {
       el.addEventListener('change', applyVisibility);
     });

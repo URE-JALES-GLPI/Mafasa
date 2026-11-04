@@ -10,9 +10,11 @@
 include('../../../inc/includes.php');
 require_once __DIR__ . '/../src/compat.php';
 require_once __DIR__ . '/../src/Config.php';
+require_once __DIR__ . '/../src/PdfExport.php';
 
 use GlpiPlugin\Mafasa\TicketsReport;
 use GlpiPlugin\Mafasa\Config as MafasaConfig;
+use GlpiPlugin\Mafasa\PdfExport;
 
 Session::checkLoginUser();
 
@@ -139,6 +141,55 @@ $backQs = http_build_query($_GET);
 $pageTitle = ($view === 'resumo')
     ? __('[URE] Mafasa — Chamados (Resumo)', 'mafasa')
     : __('[URE] Mafasa — Chamados', 'mafasa');
+if (($_GET['format'] ?? '') === 'pdf') {
+    if ($error) {
+        http_response_code(500);
+        echo mf_ptix_esc((string) $error);
+        return;
+    }
+    $pdfRows = [];
+    if ($view === 'resumo') {
+        $pdfHeaders = [__('Grupo', 'mafasa'), __('Chamados', 'mafasa'), __('Percentual', 'mafasa'),
+            __('1ª resposta (média)', 'mafasa'), __('Resolução (média)', 'mafasa')];
+        foreach ($rows as $row) {
+            $count = (int) ($row['mf_total'] ?? 0);
+            $pdfRows[] = [
+                (string) ($row['mf_label'] ?? '—'),
+                (string) $count,
+                (string) ($total > 0 ? round($count * 100 / $total, 1) : 0) . '%',
+                TicketsReport::formatDuration($row['mf_avg_first'] ?? null),
+                TicketsReport::formatDuration($row['mf_avg_resolution'] ?? null),
+            ];
+        }
+    } else {
+        $pdfHeaders = array_values(array_intersect_key($columns, array_flip($orderedCols)));
+        foreach ($rows as $row) {
+            $pdfRow = [];
+            foreach ($orderedCols as $key) {
+                $pdfRow[] = html_entity_decode(mf_ptix_cell($key, $row['mf_' . $key] ?? null), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            }
+            $pdfRows[] = $pdfRow;
+        }
+    }
+    $details = [sprintf(__('Gerado em %s', 'mafasa'), $generatedAt),
+        sprintf(__('%d registro(s)', 'mafasa'), $total)];
+    if ($view === 'resumo') {
+        $details[] = __('Agrupamento', 'mafasa') . ': ' . ($modes[$mode] ?? $mode);
+        if (isset($totals['avg_first']) && $totals['avg_first'] !== null) {
+            $details[] = __('Tempo médio de 1ª resposta', 'mafasa') . ': ' . TicketsReport::formatDuration($totals['avg_first']);
+        }
+        if (isset($totals['avg_resolution']) && $totals['avg_resolution'] !== null) {
+            $details[] = __('Tempo médio de resolução', 'mafasa') . ': ' . TicketsReport::formatDuration($totals['avg_resolution']);
+        }
+    }
+    $details[] = $filterSummary === [] ? __('Filtros: nenhum', 'mafasa')
+        : __('Filtros', 'mafasa') . ': ' . implode(' | ', $filterSummary);
+    if ($truncated) {
+        $details[] = sprintf(__('Exibindo os primeiros %d de %d registros.', 'mafasa'), TicketsReport::PRINT_LIMIT, $total);
+    }
+    PdfExport::download('relatorio-chamados.pdf', $pageTitle, $pdfHeaders, $pdfRows, $details, $footerText);
+    return;
+}
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">

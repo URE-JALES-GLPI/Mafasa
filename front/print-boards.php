@@ -10,8 +10,10 @@
 include('../../../inc/includes.php');
 require_once __DIR__ . '/../src/compat.php';
 require_once __DIR__ . '/../src/Config.php';
+require_once __DIR__ . '/../src/PdfExport.php';
 
 use GlpiPlugin\Mafasa\Config as MafasaConfig;
+use GlpiPlugin\Mafasa\PdfExport;
 use GlpiPlugin\Mafasa\TrallaReport;
 
 Session::checkLoginUser();
@@ -133,6 +135,56 @@ $backQs = http_build_query($_GET);
 $pageTitle = ($view === 'resumo')
     ? __('[URE] Mafasa — Quadros Tralla (Resumo)', 'mafasa')
     : __('[URE] Mafasa — Quadros Tralla', 'mafasa');
+if (($_GET['format'] ?? '') === 'pdf') {
+    if ($error) {
+        http_response_code(500);
+        echo mf_pbrd_esc((string) $error);
+        return;
+    }
+    $pdfRows = [];
+    if ($view === 'resumo') {
+        $isChecklist = ($mode === 'checklist');
+        $pdfHeaders = $isChecklist
+            ? [__('Item', 'mafasa'), __('Total de itens', 'mafasa'), __('Concluídos', 'mafasa'), __('Percentual', 'mafasa')]
+            : [__('Grupo', 'mafasa'), __('Cartões', 'mafasa'), __('Percentual', 'mafasa')];
+        foreach ($rows as $row) {
+            $count = (int) ($row['mf_total'] ?? 0);
+            $pdfRow = [(string) ($row['mf_label'] ?? '—'), (string) $count];
+            if ($isChecklist) {
+                $checked = (int) ($row['mf_checked'] ?? 0);
+                $pdfRow[] = (string) $checked;
+                $pdfRow[] = (string) ($count > 0 ? round($checked * 100 / $count, 1) : 0) . '%';
+            } else {
+                $pdfRow[] = (string) ($total > 0 ? round($count * 100 / $total, 1) : 0) . '%';
+            }
+            $pdfRows[] = $pdfRow;
+        }
+    } else {
+        $pdfHeaders = array_values(array_intersect_key($columns, array_flip($orderedCols)));
+        foreach ($rows as $row) {
+            $pdfRow = [];
+            foreach ($orderedCols as $key) {
+                $pdfRow[] = html_entity_decode(mf_pbrd_cell($key, $row['mf_' . $key] ?? null), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            }
+            $pdfRows[] = $pdfRow;
+        }
+    }
+    $details = [sprintf(__('Gerado em %s', 'mafasa'), $generatedAt),
+        sprintf(__('%d registro(s)', 'mafasa'), $total)];
+    if ($view === 'resumo') {
+        $details[] = __('Agrupamento', 'mafasa') . ': ' . ($modes[$mode] ?? $mode);
+        if (isset($totals['done'])) {
+            $details[] = __('Concluídos', 'mafasa') . ': ' . (int) $totals['done'];
+        }
+    }
+    $details[] = $filterSummary === [] ? __('Filtros: nenhum', 'mafasa')
+        : __('Filtros', 'mafasa') . ': ' . implode(' | ', $filterSummary);
+    if ($truncated) {
+        $details[] = sprintf(__('Exibindo os primeiros %d de %d registros.', 'mafasa'), $report::PRINT_LIMIT, $total);
+    }
+    PdfExport::download('relatorio-quadros-tralla.pdf', $pageTitle, $pdfHeaders, $pdfRows, $details, $footerText);
+    return;
+}
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">

@@ -239,6 +239,8 @@ echo "<a class='mf-btn' href='boards.php'>" . mf_brd_esc(__('Limpar filtros', 'm
 echo "<button type='button' id='mf-copy-link' class='mf-btn'>" . mf_brd_esc(__('Copiar link', 'mafasa')) . "</button>";
 echo "<a id='mf-print-link' class='mf-btn' target='_blank' data-print='print-boards.php' href='print-boards.php?"
     . mf_brd_esc(mf_brd_qs([], ['page'])) . "'>" . mf_brd_esc(__('Imprimir', 'mafasa')) . "</a>";
+echo "<a id='mf-pdf-link' class='mf-btn' data-print='print-boards.php' href='print-boards.php?"
+    . mf_brd_esc(mf_brd_qs(['format' => 'pdf'], ['page'])) . "'>" . mf_brd_esc(__('Baixar PDF', 'mafasa')) . "</a>";
 echo "</div>";
 
 echo "</form>";
@@ -349,7 +351,7 @@ if ($error) {
     }
 }
 
-echo "<script src='" . mf_brd_esc($webdir . '/public/js/app.js') . "'></script>";
+echo "<script src='" . mf_brd_esc($webdir . '/public/js/app.js?v=' . PLUGIN_MAFASA_VERSION) . "'></script>";
 echo "</div>";
 
 Html::footer();

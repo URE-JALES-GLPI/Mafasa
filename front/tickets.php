@@ -243,6 +243,8 @@ echo "<a class='mf-btn' href='tickets.php'>" . mf_tix_esc(__('Limpar filtros', '
 echo "<button type='button' id='mf-copy-link' class='mf-btn'>" . mf_tix_esc(__('Copiar link', 'mafasa')) . "</button>";
 echo "<a id='mf-print-link' class='mf-btn' target='_blank' data-print='print-tickets.php' href='print-tickets.php?"
     . mf_tix_esc(mf_tix_qs([], ['page'])) . "'>" . mf_tix_esc(__('Imprimir', 'mafasa')) . "</a>";
+echo "<a id='mf-pdf-link' class='mf-btn' data-print='print-tickets.php' href='print-tickets.php?"
+    . mf_tix_esc(mf_tix_qs(['format' => 'pdf'], ['page'])) . "'>" . mf_tix_esc(__('Baixar PDF', 'mafasa')) . "</a>";
 echo "</div>";
 
 echo "</form>";
@@ -345,7 +347,7 @@ if ($error) {
     }
 }
 
-echo "<script src='" . mf_tix_esc($webdir . '/public/js/app.js') . "'></script>";
+echo "<script src='" . mf_tix_esc($webdir . '/public/js/app.js?v=' . PLUGIN_MAFASA_VERSION) . "'></script>";
 echo "</div>";
 
 Html::footer();

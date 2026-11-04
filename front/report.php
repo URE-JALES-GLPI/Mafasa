@@ -234,6 +234,8 @@ echo "<a class='mf-btn' href='report.php'>" . mf_report_esc(__('Limpar filtros',
 echo "<button type='button' id='mf-copy-link' class='mf-btn'>" . mf_report_esc(__('Copiar link', 'mafasa')) . "</button>";
 echo "<a id='mf-print-link' class='mf-btn' target='_blank' href='print.php?"
     . mf_report_esc(mf_report_qs([], ['page'])) . "'>" . mf_report_esc(__('Imprimir', 'mafasa')) . "</a>";
+echo "<a id='mf-pdf-link' class='mf-btn' data-print='print.php' href='print.php?"
+    . mf_report_esc(mf_report_qs(['format' => 'pdf'], ['page'])) . "'>" . mf_report_esc(__('Baixar PDF', 'mafasa')) . "</a>";
 echo "</div>";
 
 echo "</form>";
@@ -283,7 +285,7 @@ if ($hasError) {
     }
 }
 
-echo "<script src='" . mf_report_esc($webdir . '/public/js/app.js') . "'></script>";
+echo "<script src='" . mf_report_esc($webdir . '/public/js/app.js?v=' . PLUGIN_MAFASA_VERSION) . "'></script>";
 echo "</div>";
 
 Html::footer();

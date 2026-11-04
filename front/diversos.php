@@ -3,10 +3,12 @@
 
 include('../../../inc/includes.php');
 require_once __DIR__ . '/../src/compat.php';
+require_once __DIR__ . '/../src/PdfExport.php';
 
 use GlpiPlugin\Mafasa\EntitiesReport;
 use GlpiPlugin\Mafasa\Report;
 use GlpiPlugin\Mafasa\TrallaReport;
+use GlpiPlugin\Mafasa\PdfExport;
 
 Session::checkLoginUser();
 
@@ -26,6 +28,27 @@ try {
 } catch (Throwable $e) {
     $entities = [];
     $error = __('Não foi possível consultar as entidades do GLPI.', 'mafasa');
+}
+
+if (($_GET['download'] ?? '') === 'pdf') {
+    if ($error !== null) {
+        http_response_code(500);
+        echo mf_div_esc($error);
+        return;
+    }
+    $pdfRows = [];
+    foreach ($entities as $entity) {
+        $pdfRows[] = [(string) $entity['id'], $entity['name'], $entity['completename']];
+    }
+    PdfExport::download(
+        'relatorio-entidades.pdf',
+        __('Entidades cadastradas no GLPI', 'mafasa'),
+        ['ID', __('Nome', 'mafasa'), __('Nome completo', 'mafasa')],
+        $pdfRows,
+        [sprintf(__('Gerado em %s', 'mafasa'), Html::convDateTime(date('Y-m-d H:i:s'))),
+            sprintf(__('%d entidade(s)', 'mafasa'), count($entities))]
+    );
+    return;
 }
 
 if (($_GET['download'] ?? '') === 'csv') {
@@ -90,7 +113,9 @@ if ($error !== null) {
     echo "<div class='mf-warning' role='alert'>" . mf_div_esc($error) . "</div>";
 } else {
     echo "<div class='mf-actions'><a class='mf-btn mf-btn-primary' href='diversos.php?download=csv'>"
-        . mf_div_esc(__('Baixar relatório CSV', 'mafasa')) . "</a></div>";
+        . mf_div_esc(__('Baixar relatório CSV', 'mafasa')) . "</a>"
+        . "<a class='mf-btn' href='diversos.php?download=pdf'>"
+        . mf_div_esc(__('Baixar PDF', 'mafasa')) . "</a></div>";
     echo "<div class='mf-result-bar'><span class='mf-page-info'>"
         . mf_div_esc(sprintf(__('%d entidade(s)', 'mafasa'), count($entities))) . "</span></div>";
     if ($entities === []) {
