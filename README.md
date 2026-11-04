@@ -9,7 +9,7 @@ desmarcáveis, resumos agregados e impressão/PDF com cabeçalho institucional
 
 1. Copiar a pasta `Mafasa` para `plugins/` ou `marketplace/` do GLPI.
 2. Em Configurar → Plugins: Instalar → Ativar.
-3. Acessar em Ferramentas → Relatórios (ou abrir diretamente
+3. Acessar em Ferramentas → Indicadores (ou abrir diretamente
    `front/report.php`; as telas têm navegação interna entre Ativos, Chamados,
    Quadros e Diversos).
 
@@ -38,7 +38,7 @@ O acesso ao plugin é controlado por perfil, com uma única opção **Sim/Não**
 
 O direito é gravado em `glpi_profilerights` com o nome
 `plugin_mafasa_access`. Enquanto não existir a linha (ou o valor for 0), o menu
-Ferramentas → Relatórios não aparece e as telas respondem "sem permissão".
+Ferramentas → Indicadores não aparece e as telas respondem "sem permissão".
 
 ## Relatórios
 
@@ -54,4 +54,4 @@ Ferramentas → Relatórios não aparece e as telas respondem "sem permissão".
 
 ## Status
 
-v1.3.1 — relatórios de Ativos, Chamados, Quadros Tralla e Diversos.
+v1.3.2 — relatórios de Ativos, Chamados, Quadros Tralla e Diversos.

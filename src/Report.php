@@ -182,11 +182,11 @@ class Report extends \CommonGLPI
 
     public static function getTypeName($nb = 0)
     {
-        return '[URE] Mafasa';
+        return 'Relatórios';
     }
 
     /**
-     * Conteúdo do menu Ferramentas → Mafasa (shape v1 preservado).
+     * Conteúdo do menu Ferramentas → Indicadores (shape v1 preservado).
      */
     public static function getMenuContent()
     {
@@ -213,7 +213,7 @@ class Report extends \CommonGLPI
 
         $icons = self::getCategoryIcons();
         $menu = [
-            'title' => 'Relatórios',
+            'title' => 'Indicadores',
             'page'  => $base . '/front/report.php',
             'icon'  => self::getIcon(),
         ];

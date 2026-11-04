@@ -145,7 +145,7 @@ $pageTitle = ($view === 'resumo')
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title><?php echo mf_ptix_esc($pageTitle); ?></title>
+<title><?php echo mf_ptix_esc(__('Relatórios', 'mafasa')); ?></title>
 <link rel="stylesheet" href="<?php echo mf_ptix_esc($cssUrl); ?>">
 </head>
 <body>

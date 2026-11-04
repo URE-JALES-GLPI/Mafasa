@@ -146,7 +146,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && !$success) {
 }
 
 Html::header(
-    __('Configuração — Mafasa', 'mafasa'),
+    __('Relatórios', 'mafasa'),
     $_SERVER['PHP_SELF'],
     'config',
     'plugins'

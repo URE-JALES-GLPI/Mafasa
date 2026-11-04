@@ -109,7 +109,7 @@ if ($view === 'lista') {
 }
 
 Html::header(
-    __('[URE] Mafasa — Quadros', 'mafasa'),
+    __('Relatórios', 'mafasa'),
     $_SERVER['PHP_SELF'],
     'tools',
     \GlpiPlugin\Mafasa\Report::class

@@ -57,7 +57,7 @@ if (($_GET['download'] ?? '') === 'csv') {
 }
 
 Html::header(
-    __('[URE] Mafasa — Diversos', 'mafasa'),
+    __('Relatórios', 'mafasa'),
     $_SERVER['PHP_SELF'],
     'tools',
     Report::class

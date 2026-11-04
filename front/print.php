@@ -119,7 +119,7 @@ $pageTitle = ($headerTitle !== '') ? $headerTitle : __('Relatório de Ativos', '
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title><?php echo mf_print_esc($pageTitle); ?></title>
+<title><?php echo mf_print_esc(__('Relatórios', 'mafasa')); ?></title>
 <link rel="stylesheet" href="<?php echo mf_print_esc($cssUrl); ?>">
 </head>
 <body>

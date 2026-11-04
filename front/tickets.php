@@ -116,7 +116,7 @@ if ($view === 'lista') {
 }
 
 Html::header(
-    __('[URE] Mafasa — Chamados', 'mafasa'),
+    __('Relatórios', 'mafasa'),
     $_SERVER['PHP_SELF'],
     'tools',
     \GlpiPlugin\Mafasa\Report::class
