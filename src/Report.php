@@ -251,6 +251,11 @@ class Report extends \CommonGLPI
                 'icon'  => 'ti ti-layout-kanban',
             ];
         }
+        $menu['options']['diversos'] = [
+            'title' => 'Diversos',
+            'page'  => $base . '/front/diversos.php',
+            'icon'  => 'ti ti-list-details',
+        ];
         return $menu;
     }
 

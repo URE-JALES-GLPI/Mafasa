@@ -147,6 +147,8 @@ if (BoardsReport::isReady()) {
     echo "<a class='mf-btn" . ($source === 'kanpro' ? ' mf-btn-primary' : '') . "' href='" . mf_brd_esc($webdir . '/front/boards.php') . "'>"
         . mf_brd_esc(__('Quadros Kanpro', 'mafasa')) . "</a>";
 }
+echo "<a class='mf-btn' href='" . mf_brd_esc($webdir . '/front/diversos.php') . "'>"
+    . mf_brd_esc(__('Diversos', 'mafasa')) . "</a>";
 echo "</div>";
 
 if (!$available) {

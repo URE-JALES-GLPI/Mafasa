@@ -148,6 +148,8 @@ if (BoardsReport::available() && BoardsReport::canView()) {
     echo "<a class='mf-btn' href='" . mf_tix_esc($webdir . '/front/boards.php') . "'>"
         . mf_tix_esc(__('Quadros Kanpro', 'mafasa')) . "</a>";
 }
+echo "<a class='mf-btn' href='" . mf_tix_esc($webdir . '/front/diversos.php') . "'>"
+    . mf_tix_esc(__('Diversos', 'mafasa')) . "</a>";
 echo "</div>";
 
 // ---- Abas lista/resumo ----
