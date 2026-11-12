@@ -437,7 +437,7 @@ class TrallaReport
         }
         // Histórico do KanPro (o plugin pode estar desativado: só lê as tabelas que ficaram no banco).
         $source = in_array($value('source'), ['tralla', 'kanpro', 'both'], true) ? $value('source') : 'both';
-        $kanproInfo = ['cutoff' => null, 'count' => 0, 'available' => self::kanproAvailable()];
+        $kanproInfo = ['cutoff' => null, 'count' => 0, 'available' => self::kanproAvailable(), 'live' => self::kanproSourceExists()];
         if ($source !== 'tralla' && $kanproInfo['available']) {
             try {
                 // O Tralla é a fonte a partir do 1º card de manutenção dele; o KanPro vale só antes disso,
@@ -450,23 +450,21 @@ class TrallaReport
                 $cutoff = (string) ($cutoffRow['first'] ?? '');
                 $kanproInfo['cutoff'] = $cutoff !== '' ? $cutoff : null;
                 $kEnd = $source === 'kanpro' || $cutoff === '' ? $end : min($end, $cutoff);
-                $kSql = 'SELECT c.`id`, c.`entities_id`, ce.`name` AS entity_name, ce.`completename` AS entity_full,'
-                    . ' DATE_FORMAT(a.`date_creation`, \'%Y-%m\') AS ym'
-                    . ' FROM `glpi_plugin_kanpro_cards` c'
-                    . ' INNER JOIN (SELECT `plugin_kanpro_cards_id` AS cid, MAX(`id`) AS mid FROM `glpi_plugin_kanpro_activities`'
-                    . "     WHERE `action` = 'maintenance_finalize' GROUP BY `plugin_kanpro_cards_id`) la ON la.cid = c.`id`"
-                    . ' INNER JOIN `glpi_plugin_kanpro_activities` a ON a.`id` = la.mid'
-                    . ' LEFT JOIN `glpi_entities` ce ON ce.`id` = c.`entities_id`'
-                    . ' WHERE a.`users_id` IN (' . $ids . ')'
-                    . ' AND a.`date_creation` BETWEEN ' . self::quote($start) . ' AND ' . self::quote($kEnd);
+                $kSql = 'SELECT h.`kanpro_cards_id` AS id, h.`entities_id`, COALESCE(ce.`name`, h.`entity_name`) AS entity_name,'
+                    . ' COALESCE(ce.`completename`, h.`entity_full`) AS entity_full,'
+                    . ' DATE_FORMAT(h.`finalized_at`, '%Y-%m') AS ym'
+                    . ' FROM `' . self::KANPRO_TABLE . '` h'
+                    . ' LEFT JOIN `glpi_entities` ce ON ce.`id` = h.`entities_id`'
+                    . ' WHERE h.`users_id` IN (' . $ids . ')'
+                    . ' AND h.`finalized_at` BETWEEN ' . self::quote($start) . ' AND ' . self::quote($kEnd);
                 if (function_exists('mafasa_entity_sql')) {
-                    $kSql .= (string) \mafasa_entity_sql('c');
+                    $kSql .= (string) \mafasa_entity_sql('h');
                 }
                 if ((int) $value('finalizer_id') > 0 && isset($finalizers[(int) $value('finalizer_id')])) {
-                    $kSql .= ' AND a.`users_id` = ' . (int) $value('finalizer_id');
+                    $kSql .= ' AND h.`users_id` = ' . (int) $value('finalizer_id');
                 }
                 if ($chosen !== []) {
-                    $kSql .= ' AND c.`entities_id` IN (' . implode(',', $chosen) . ')';
+                    $kSql .= ' AND h.`entities_id` IN (' . implode(',', $chosen) . ')';
                 }
                 $kRes = $DB->doQuery($kSql);
                 while (($raw = $kRes->fetch_assoc()) !== null) {
@@ -536,14 +534,74 @@ class TrallaReport
         return $cache = $out;
     }
 
-    /** As tabelas do KanPro ainda existem no banco (o plugin pode estar desativado)? */
-    public static function kanproAvailable(): bool
+    /** Cópia própria do histórico do KanPro (o Mafasa não depende mais das tabelas do KanPro). */
+    public const KANPRO_TABLE = 'glpi_plugin_mafasa_kanpro_history';
+
+    /** As tabelas originais do KanPro ainda estão no banco? */
+    public static function kanproSourceExists(): bool
     {
         global $DB;
         try {
             return $DB->tableExists('glpi_plugin_kanpro_cards') && $DB->tableExists('glpi_plugin_kanpro_activities');
         } catch (\Throwable $e) {
             return false;
+        }
+    }
+
+    /**
+     * Copia para o Mafasa as finalizações de manutenção do KanPro (1 linha por card, a mais recente).
+     * Idempotente: pode rodar sempre; só entram cards ainda não copiados. Depois da cópia, o KanPro pode ser desinstalado.
+     *
+     * @return int quantidade de cards novos copiados (0 se nada a copiar)
+     */
+    public static function snapshotKanpro(): int
+    {
+        global $DB;
+        if (!self::kanproSourceExists()) {
+            return 0;
+        }
+        try {
+            $DB->doQuery('CREATE TABLE IF NOT EXISTS `' . self::KANPRO_TABLE . '` ('
+                . ' `kanpro_cards_id` int unsigned NOT NULL,'
+                . ' `entities_id` int unsigned NOT NULL DEFAULT 0,'
+                . ' `entity_name` varchar(255) DEFAULT NULL,'
+                . ' `entity_full` text,'
+                . ' `users_id` int unsigned NOT NULL DEFAULT 0,'
+                . ' `finalized_at` timestamp NULL DEFAULT NULL,'
+                . ' `copied_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,'
+                . ' PRIMARY KEY (`kanpro_cards_id`), KEY `finalized_at` (`finalized_at`), KEY `users_id` (`users_id`), KEY `entities_id` (`entities_id`)'
+                . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+            $before = (int) ($DB->doQuery('SELECT COUNT(*) AS n FROM `' . self::KANPRO_TABLE . '`')->fetch_assoc()['n'] ?? 0);
+            $DB->doQuery('INSERT IGNORE INTO `' . self::KANPRO_TABLE . '`'
+                . ' (`kanpro_cards_id`, `entities_id`, `entity_name`, `entity_full`, `users_id`, `finalized_at`)'
+                . ' SELECT c.`id`, c.`entities_id`, ce.`name`, ce.`completename`, a.`users_id`, a.`date_creation`'
+                . ' FROM `glpi_plugin_kanpro_cards` c'
+                . ' INNER JOIN (SELECT `plugin_kanpro_cards_id` AS cid, MAX(`id`) AS mid FROM `glpi_plugin_kanpro_activities`'
+                . "     WHERE `action` = 'maintenance_finalize' GROUP BY `plugin_kanpro_cards_id`) la ON la.cid = c.`id`"
+                . ' INNER JOIN `glpi_plugin_kanpro_activities` a ON a.`id` = la.mid'
+                . ' LEFT JOIN `glpi_entities` ce ON ce.`id` = c.`entities_id`');
+            $after = (int) ($DB->doQuery('SELECT COUNT(*) AS n FROM `' . self::KANPRO_TABLE . '`')->fetch_assoc()['n'] ?? 0);
+            return max(0, $after - $before);
+        } catch (\Throwable $e) {
+            error_log('[mafasa] cópia do histórico do KanPro falhou: ' . $e->getMessage());
+            return 0;
+        }
+    }
+
+    /** Há histórico do KanPro utilizável (cópia própria, ou tabelas originais que serão copiadas agora)? */
+    public static function kanproAvailable(): bool
+    {
+        global $DB;
+        static $ready = null;
+        if ($ready !== null) {
+            return $ready;
+        }
+        self::snapshotKanpro();
+        try {
+            return $ready = $DB->tableExists(self::KANPRO_TABLE)
+                && (int) ($DB->doQuery('SELECT COUNT(*) AS n FROM `' . self::KANPRO_TABLE . '`')->fetch_assoc()['n'] ?? 0) > 0;
+        } catch (\Throwable $e) {
+            return $ready = false;
         }
     }
 

@@ -134,7 +134,7 @@ echo "<div class='mf-card'><strong>" . mf_brd_esc(__('Período', 'mafasa')) . ":
 if (($result['source'] ?? 'tralla') !== 'tralla' && !empty($result['kanpro']['available'])) {
     $cut = $result['kanpro']['cutoff'] ?? null;
     echo "<br><small>" . mf_brd_esc(sprintf(
-        __('Do KanPro entram %d card(s), finalizados pelos mesmos técnicos%s. O KanPro só vale antes do Tralla para não contar a mesma manutenção duas vezes.', 'mafasa'),
+        __('Do KanPro entram %d card(s), finalizados pelos mesmos técnicos%s. O KanPro só vale antes do Tralla para não contar a mesma manutenção duas vezes. Esses dados já estão copiados no Mafasa: o KanPro pode ser desinstalado sem perder o histórico.', 'mafasa'),
         (int) ($result['kanpro']['count'] ?? 0),
         $cut ? ' até ' . date('d/m/Y', strtotime($cut)) : ''
     )) . "</small>";
