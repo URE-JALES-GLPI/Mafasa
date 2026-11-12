@@ -21,7 +21,7 @@ Session::checkLoginUser();
 $report = TrallaReport::class;
 
 if (!$report::canView()) {
-    mafasa_display_right_error(__('Você não tem permissão para visualizar quadros Tralla.', 'mafasa'));
+    mafasa_display_right_error(__('Você não tem permissão para visualizar o Tralla.', 'mafasa'));
     return;
 }
 
@@ -229,8 +229,8 @@ if (is_file($cssPath)) {
 }
 $backQs = http_build_query($_GET);
 $pageTitle = ($view === 'resumo')
-    ? __('[URE] Mafasa — Quadros Tralla (Resumo)', 'mafasa')
-    : __('[URE] Mafasa — Quadros Tralla', 'mafasa');
+    ? __('[URE] Mafasa — Tralla (Resumo)', 'mafasa')
+    : __('[URE] Mafasa — Tralla', 'mafasa');
 if (($_GET['format'] ?? '') === 'pdf') {
     if ($error) {
         http_response_code(500);

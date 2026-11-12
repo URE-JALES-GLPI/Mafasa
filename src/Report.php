@@ -238,7 +238,7 @@ class Report extends \CommonGLPI
         // Relatórios dos quadros do Tralla (apenas com o Tralla ativo).
         if (TrallaReport::isReady()) {
             $menu['options']['tralla_boards'] = [
-                'title' => 'Quadros Tralla',
+                'title' => 'Tralla',
                 'page'  => $base . '/front/boards.php',
                 'icon'  => 'ti ti-layout-kanban',
             ];

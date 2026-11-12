@@ -20,7 +20,7 @@ Session::checkLoginUser();
 $report = TrallaReport::class;
 
 if (!$report::canView()) {
-    mafasa_display_right_error(__('Você não tem permissão para visualizar quadros Tralla.', 'mafasa'));
+    mafasa_display_right_error(__('Você não tem permissão para visualizar o Tralla.', 'mafasa'));
     return;
 }
 
@@ -123,7 +123,7 @@ echo "<link rel='stylesheet' href='" . mf_brd_esc($webdir . '/public/css/mafasa.
 
 echo "<div class='mf-page'>";
 echo "<div class='mf-page-header'>";
-echo "<h2>" . mf_brd_esc(__('Relatório de Quadros Tralla', 'mafasa')) . "</h2>";
+echo "<h2>" . mf_brd_esc(__('Relatório do Tralla', 'mafasa')) . "</h2>";
 echo "</div>";
 
 // ---- Navegação entre relatórios ----
@@ -138,7 +138,7 @@ if (class_exists('Ticket') && Ticket::canView()) {
 }
 if (TrallaReport::isReady()) {
     echo "<a class='mf-btn mf-btn-primary' href='" . mf_brd_esc($webdir . '/front/boards.php') . "'>"
-        . mf_brd_esc(__('Quadros Tralla', 'mafasa')) . "</a>";
+        . mf_brd_esc(__('Tralla', 'mafasa')) . "</a>";
 }
 echo "<a class='mf-btn' href='" . mf_brd_esc($webdir . '/front/diversos.php') . "'>"
     . mf_brd_esc(__('Diversos', 'mafasa')) . "</a>";

@@ -129,7 +129,7 @@ if (class_exists('Ticket') && Ticket::canView()) {
 }
 if (\GlpiPlugin\Mafasa\TrallaReport::isReady()) {
     echo "<a class='mf-btn' href='" . mf_report_esc($webdir . '/front/boards.php') . "'>"
-        . mf_report_esc(__('Quadros Tralla', 'mafasa')) . "</a>";
+        . mf_report_esc(__('Tralla', 'mafasa')) . "</a>";
 }
 echo "<a class='mf-btn' href='" . mf_report_esc($webdir . '/front/diversos.php') . "'>"
     . mf_report_esc(__('Diversos', 'mafasa')) . "</a>";

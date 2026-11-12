@@ -99,7 +99,7 @@ if (class_exists('Ticket') && Ticket::canView()) {
     echo "<a class='mf-btn' href='" . mf_div_esc($webdir . '/front/tickets.php') . "'>" . mf_div_esc(__('Chamados', 'mafasa')) . "</a>";
 }
 if (TrallaReport::isReady()) {
-    echo "<a class='mf-btn' href='" . mf_div_esc($webdir . '/front/boards.php') . "'>" . mf_div_esc(__('Quadros Tralla', 'mafasa')) . "</a>";
+    echo "<a class='mf-btn' href='" . mf_div_esc($webdir . '/front/boards.php') . "'>" . mf_div_esc(__('Tralla', 'mafasa')) . "</a>";
 }
 echo "<a class='mf-btn mf-btn-primary' href='" . mf_div_esc($webdir . '/front/diversos.php') . "'>" . mf_div_esc(__('Diversos', 'mafasa')) . "</a>";
 echo "</div>";

@@ -45,7 +45,7 @@ Ferramentas → Indicadores não aparece e as telas respondem "sem permissão".
 - **Ativos** (`front/report.php`): multi-tipo, filtros, colunas desmarcáveis.
 - **Chamados** (`front/tickets.php`): lista detalhada + resumos agregados
   (status, tipo, prioridade, técnico, mês etc. com tempos médios).
-- **Quadros Tralla** (`front/boards.php`): cartões por quadro/lista/membro,
+- **Tralla** (`front/boards.php`): cartões por quadro/lista/membro,
   prazos, checklists e vínculo com chamados. Requer o plugin Tralla ativo.
   Aba **Por entidade e mês**: cards por entidade em cada mês (um mês, vários ou
   de um mês até outro), contando os cards finalizados pelos técnicos listados em
@@ -56,7 +56,7 @@ Ferramentas → Indicadores não aparece e as telas respondem "sem permissão".
   entidades visíveis no contexto ativo do usuário; quem pode visualizar todas
   recebe todas as entidades cadastradas.
 
-Os relatórios de Ativos, Chamados e Quadros Tralla têm a ação **Baixar PDF**.
+Os relatórios de Ativos, Chamados e Tralla têm a ação **Baixar PDF**.
 Ela usa os filtros, a visão e as colunas selecionadas. O PDF segue o limite de
 5.000 registros usado pela impressão e informa quando o resultado foi truncado.
 

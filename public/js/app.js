@@ -142,7 +142,7 @@
     initEntityPicker();
   });
 
-  /* Seletor de entidades (Quadros Tralla → Por entidade e mês): filtra pelo nome. */
+  /* Seletor de entidades (Tralla → Por entidade e mês): filtra pelo nome. */
   function initEntityPicker() {
     document.querySelectorAll('[data-entity-picker]').forEach(function (picker) {
       var search = picker.querySelector('[data-entity-search]');
