@@ -37,6 +37,12 @@ if (($_GET['view'] ?? '') === 'entidades') {
     $body = [];
     foreach ($ent['rows'] as $row) {
         $line = [$row['entity']];
+        if ((int) $row['total'] === 0) {
+            $line[] = __('Não teve chamados', 'mafasa');
+            $line = array_pad($line, count($headers), '');
+            $body[] = $line;
+            continue;
+        }
         foreach ($months as $ym) {
             $line[] = (string) (int) ($row['counts'][$ym] ?? 0);
         }
@@ -58,7 +64,8 @@ if (($_GET['view'] ?? '') === 'entidades') {
     $details = [
         sprintf(__('Gerado em %s', 'mafasa'), Html::convDateTime(date('Y-m-d H:i:s'))),
         __('Período', 'mafasa') . ': ' . $period,
-        sprintf(__('%d card(s) em %d entidade(s)', 'mafasa'), (int) $ent['grand'], count($ent['rows'])),
+        sprintf(__('%d card(s); %d entidade(s), %d sem chamados', 'mafasa'), (int) $ent['grand'], count($ent['rows']),
+            count($ent['rows']) - (int) ($ent['with_cards'] ?? 0)),
         __('Técnicos', 'mafasa') . ': ' . implode(', ', array_values($ent['finalizers']))
             . ' ' . __('(cards finalizados por eles ou que estão com eles)', 'mafasa'),
     ];
@@ -98,6 +105,10 @@ if (($_GET['view'] ?? '') === 'entidades') {
         echo '</tr></thead><tbody>';
         foreach ($body as $line) {
             echo '<tr>';
+            if (count($line) > 1 && $line[1] === __('Não teve chamados', 'mafasa')) {
+                echo '<td>' . $e($line[0]) . '</td><td colspan="' . (count($headers) - 1) . '" style="color:#7a8597;font-style:italic">' . $e($line[1]) . '</td></tr>';
+                continue;
+            }
             foreach ($line as $i => $cell) {
                 echo '<td' . ($i > 0 ? ' style="text-align:right"' : '') . '>' . $e($cell) . '</td>';
             }

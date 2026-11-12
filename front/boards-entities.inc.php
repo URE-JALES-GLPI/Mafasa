@@ -60,6 +60,28 @@ foreach ($result['finalizers'] as $id => $name) {
 }
 echo "</select></div>";
 
+// Seletor de entidades com busca pelo nome
+$chosenEntities = array_map('intval', (array) ($result['entities'] ?? []));
+$entityOptions = TrallaReport::entityChoices();
+$pickerLabel = $chosenEntities === [] ? __('Todas as entidades', 'mafasa')
+    : sprintf(_n('%d entidade selecionada', '%d entidades selecionadas', count($chosenEntities), 'mafasa'), count($chosenEntities));
+echo "<div class='mf-field mf-field-wide'><label>" . mf_brd_esc(__('Entidades', 'mafasa')) . "</label>"
+    . "<details class='mf-entity-picker' data-entity-picker><summary class='mf-btn'>" . mf_brd_esc($pickerLabel) . "</summary>"
+    . "<div class='mf-entity-panel'>"
+    . "<input type='search' class='mf-entity-search' placeholder='" . mf_brd_esc(__('Digite para filtrar pelo nome…', 'mafasa')) . "' data-entity-search>"
+    . "<div class='mf-entity-tools'>"
+    . "<button type='button' class='mf-btn mf-btn-sm' data-entity-mark='1'>" . mf_brd_esc(__('Marcar as visíveis', 'mafasa')) . "</button>"
+    . "<button type='button' class='mf-btn mf-btn-sm' data-entity-mark='0'>" . mf_brd_esc(__('Desmarcar todas', 'mafasa')) . "</button>"
+    . "<span class='mf-entity-count' data-entity-count></span></div>"
+    . "<div class='mf-entity-list'>";
+foreach ($entityOptions as $id => $entity) {
+    echo "<label class='mf-entity-item' data-entity-name='" . mf_brd_esc(mb_strtolower($entity['full'] ?: $entity['name'])) . "' title='" . mf_brd_esc($entity['full']) . "'>"
+        . "<input type='checkbox' name='entities[]' value='" . (int) $id . "'" . (in_array((int) $id, $chosenEntities, true) ? ' checked' : '') . "> "
+        . mf_brd_esc($entity['name']) . "</label>";
+}
+echo "</div><small>" . mf_brd_esc(__('Nenhuma marcada = todas as escolas. Clique em "Gerar relatório" para aplicar.', 'mafasa')) . "</small>"
+    . "</div></details></div>";
+
 echo "<div class='mf-field'><label for='mf-f-scope'>" . mf_brd_esc(__('Situação', 'mafasa')) . "</label><select id='mf-f-scope' name='scope'>";
 foreach (['' => 'Todos (finalizados e com o técnico)', 'finalized' => 'Só finalizados', 'open' => 'Só em aberto (com o técnico)'] as $k => $label) {
     echo "<option value='" . mf_brd_esc($k) . "'" . ($k === $val('scope') ? ' selected' : '') . ">" . mf_brd_esc($label) . "</option>";
@@ -97,6 +119,8 @@ echo "<div class='mf-card'><strong>" . mf_brd_esc(__('Período', 'mafasa')) . ":
     . mf_brd_esc(TrallaReport::monthLabel($range['from']) . ($range['from'] !== $range['to'] ? ' a ' . TrallaReport::monthLabel($range['to']) : ''))
     . " &nbsp;|&nbsp; <strong>" . mf_brd_esc(__('Cards', 'mafasa')) . ":</strong> " . (int) $result['grand']
     . " &nbsp;|&nbsp; <strong>" . mf_brd_esc(__('Entidades', 'mafasa')) . ":</strong> " . count($result['rows'])
+    . " (" . (int) ($result['with_cards'] ?? 0) . " " . mf_brd_esc(__('com cards', 'mafasa')) . ", "
+    . (count($result['rows']) - (int) ($result['with_cards'] ?? 0)) . " " . mf_brd_esc(__('sem', 'mafasa')) . ")"
     . "<br><small>" . mf_brd_esc(__('Conta os cards finalizados por estes técnicos (mês da finalização) ou que estão com eles em qualquer situação — em andamento, aguardando aprovação, retirada, pausado (mês em que pegaram o card)', 'mafasa') . ': '
         . ($names !== [] ? implode(', ', $names) : '—') . '.') . "</small>";
 if (!empty($range['capped'])) {
@@ -119,7 +143,11 @@ if (!empty($result['error'])) {
     }
     echo "</tr></thead><tbody>";
     foreach ($result['rows'] as $row) {
-        echo "<tr><td title='" . mf_brd_esc($row['full']) . "'>" . mf_brd_esc($row['entity']) . "</td>";
+        echo "<tr" . ((int) $row['total'] === 0 ? " class='mf-row-empty'" : '') . "><td title='" . mf_brd_esc($row['full']) . "'>" . mf_brd_esc($row['entity']) . "</td>";
+        if ((int) $row['total'] === 0) {
+            echo "<td colspan='" . (count($months) + (count($months) > 1 ? 1 : 0)) . "' class='mf-none'>" . mf_brd_esc(__('Não teve chamados', 'mafasa')) . "</td></tr>";
+            continue;
+        }
         foreach ($months as $ym) {
             $n = (int) ($row['counts'][$ym] ?? 0);
             echo "<td class='mf-num" . ($n === 0 ? ' mf-zero' : '') . "'>" . $n . "</td>";

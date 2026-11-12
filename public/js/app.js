@@ -139,5 +139,40 @@
 
     initSelect2();
     applyVisibility();
+    initEntityPicker();
   });
+
+  /* Seletor de entidades (Quadros Tralla → Por entidade e mês): filtra pelo nome. */
+  function initEntityPicker() {
+    document.querySelectorAll('[data-entity-picker]').forEach(function (picker) {
+      var search = picker.querySelector('[data-entity-search]');
+      var items = Array.prototype.slice.call(picker.querySelectorAll('.mf-entity-item'));
+      var count = picker.querySelector('[data-entity-count]');
+      function norm(t) { return (t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
+      function refresh() {
+        var term = norm(search ? search.value.trim() : '');
+        var shown = 0, checked = 0;
+        items.forEach(function (item) {
+          var ok = !term || norm(item.getAttribute('data-entity-name')).indexOf(term) !== -1;
+          item.hidden = !ok;
+          if (ok) { shown++; }
+          if (item.querySelector('input').checked) { checked++; }
+        });
+        if (count) { count.textContent = checked + ' marcada(s) · ' + shown + ' na lista'; }
+      }
+      if (search) { search.addEventListener('input', refresh); }
+      picker.addEventListener('change', refresh);
+      picker.querySelectorAll('[data-entity-mark]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var on = btn.getAttribute('data-entity-mark') === '1';
+          items.forEach(function (item) {
+            if (!on || !item.hidden) { item.querySelector('input').checked = on; }
+          });
+          refresh();
+        });
+      });
+      picker.addEventListener('toggle', function () { if (picker.open && search) { search.focus(); } });
+      refresh();
+    });
+  }
 })();

@@ -364,7 +364,7 @@ class TrallaReport
         $byTeam = 'h.`users_id` IN (' . $ids . ')';
         $refDate = 'CASE WHEN ' . $byTeam . ' THEN h.`date_creation` ELSE COALESCE(c.`date_taken`, c.`date_creation`) END';
         $person = 'CASE WHEN ' . $byTeam . ' THEN h.`users_id` ELSE c.`technician_id` END';
-        $sql = 'SELECT c.`id`, ce.`name` AS entity_name, ce.`completename` AS entity_full,'
+        $sql = 'SELECT c.`id`, c.`entities_id`, ce.`name` AS entity_name, ce.`completename` AS entity_full,'
             . ' DATE_FORMAT(' . $refDate . ', \'%Y-%m\') AS ym, (' . $byTeam . ') AS finalized'
             . ' FROM `glpi_plugin_tralla_cards` c'
             . ' INNER JOIN `glpi_plugin_tralla_boards` b ON b.`id` = c.`plugin_tralla_boards_id`'
@@ -392,6 +392,13 @@ class TrallaReport
         if ((int) $value('finalizer_id') > 0 && isset($finalizers[(int) $value('finalizer_id')])) {
             $sql .= ' AND ' . $person . ' = ' . (int) $value('finalizer_id');
         }
+        // Entidades escolhidas no seletor (vazio = todas).
+        $allEntities = self::entityChoices();
+        $chosen = array_values(array_filter(array_map('intval', (array) ($params['entities'] ?? [])),
+            static fn (int $id): bool => isset($allEntities[$id])));
+        if ($chosen !== []) {
+            $sql .= ' AND c.`entities_id` IN (' . implode(',', $chosen) . ')';
+        }
         if ($value('scope') === 'finalized') {
             $sql .= ' AND ' . $byTeam;
         } elseif ($value('scope') === 'open') {
@@ -399,22 +406,29 @@ class TrallaReport
         }
 
         $rows = [];
-        $totals = array_fill_keys($range['months'], 0);
+        $blank = array_fill_keys($range['months'], 0);
+        // Entidades sem cards também aparecem ("Não teve chamados"): as escolhidas, ou todas as
+        // entidades finais (sem filhas) que o usuário vê.
+        foreach ($chosen !== [] ? $chosen : array_keys(array_filter($allEntities, static fn ($e) => $e['leaf'])) as $entityId) {
+            $rows[$entityId] = ['entity' => $allEntities[$entityId]['name'], 'full' => $allEntities[$entityId]['full'],
+                'counts' => $blank, 'total' => 0];
+        }
+        $totals = $blank;
         $grand = 0;
         try {
             $res = $DB->doQuery($sql);
             while (($raw = $res->fetch_assoc()) !== null) {
-                $entity = trim((string) ($raw['entity_name'] ?? '')) ?: 'Sem entidade';
+                $entityId = (int) ($raw['entities_id'] ?? 0);
                 $ym = (string) $raw['ym'];
                 if (!isset($totals[$ym])) {
                     continue;
                 }
-                if (!isset($rows[$entity])) {
-                    $rows[$entity] = ['entity' => $entity, 'full' => (string) ($raw['entity_full'] ?? ''),
-                        'counts' => array_fill_keys($range['months'], 0), 'total' => 0];
+                if (!isset($rows[$entityId])) {
+                    $rows[$entityId] = ['entity' => trim((string) ($raw['entity_name'] ?? '')) ?: 'Sem entidade',
+                        'full' => (string) ($raw['entity_full'] ?? ''), 'counts' => $blank, 'total' => 0];
                 }
-                $rows[$entity]['counts'][$ym]++;
-                $rows[$entity]['total']++;
+                $rows[$entityId]['counts'][$ym]++;
+                $rows[$entityId]['total']++;
                 $totals[$ym]++;
                 $grand++;
             }
@@ -427,7 +441,45 @@ class TrallaReport
             : ([$b['total'], $a['entity']] <=> [$a['total'], $b['entity']]));
 
         return ['months' => $range['months'], 'rows' => array_values($rows), 'totals' => $totals, 'grand' => $grand,
-            'range' => $range, 'finalizers' => $finalizers, 'error' => null];
+            'range' => $range, 'finalizers' => $finalizers, 'entities' => $chosen,
+            'with_cards' => count(array_filter($rows, static fn ($r) => $r['total'] > 0)), 'error' => null];
+    }
+
+    /**
+     * Entidades do GLPI que o usuário vê: id => [name, full, leaf]. "leaf" = sem entidades filhas
+     * (as escolas); as entidades-mãe só aparecem quando têm cards ou são escolhidas no seletor.
+     */
+    public static function entityChoices(): array
+    {
+        global $DB;
+        static $cache = null;
+        if ($cache !== null) {
+            return $cache;
+        }
+        $visible = function_exists('mafasa_visible_entities') ? \mafasa_visible_entities() : [];
+        $restricted = function_exists('mafasa_can_view_all_entities') && !\mafasa_can_view_all_entities();
+        $out = [];
+        $parents = [];
+        try {
+            foreach ($DB->request(['SELECT' => ['id', 'name', 'completename', 'entities_id'], 'FROM' => 'glpi_entities']) as $row) {
+                $id = (int) $row['id'];
+                if ($id > 0) {
+                    $parents[(int) $row['entities_id']] = true;
+                }
+                if ($restricted && !in_array($id, $visible, true)) {
+                    continue;
+                }
+                $out[$id] = ['name' => (string) $row['name'], 'full' => (string) $row['completename'], 'leaf' => true];
+            }
+        } catch (\Throwable $e) {
+            return $cache = [];
+        }
+        foreach ($out as $id => &$entity) {
+            $entity['leaf'] = !isset($parents[$id]);
+        }
+        unset($entity);
+        uasort($out, static fn ($a, $b) => strnatcasecmp($a['name'], $b['name']));
+        return $cache = $out;
     }
 
     /** Opções de quadro para os filtros da visão por entidade. */
