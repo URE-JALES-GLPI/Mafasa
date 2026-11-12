@@ -276,3 +276,38 @@ if (!function_exists('mafasa_access_help')) {
             . 'Configurar → Perfis → (seu perfil) → aba Relatórios.';
     }
 }
+
+if (!function_exists('mafasa_chart_block')) {
+    /**
+     * Bloco de gráfico opcional (desligado por padrão). O navegador desenha com o ECharts que já vem no GLPI.
+     *
+     * @param string[]                                $categories rótulos do eixo
+     * @param array<int, array{name:string,data:int[]}> $series      uma ou mais séries
+     * @param array{transpose?:bool,total?:int[]}      $opts        transpose: linhas viram séries (ex.: entidade x mês)
+     */
+    function mafasa_chart_block(string $id, string $title, array $categories, array $series, array $opts = []): string
+    {
+        global $CFG_GLPI;
+
+        if ($categories === [] || $series === []) {
+            return '';
+        }
+        $payload = [
+            'title'      => $title,
+            'categories' => array_values(array_map('strval', $categories)),
+            'series'     => array_values(array_map(static fn (array $s): array => [
+                'name' => (string) $s['name'], 'data' => array_map('floatval', array_values($s['data'])),
+            ], $series)),
+            'transpose'  => !empty($opts['transpose']),
+        ];
+        $json = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_HEX_TAG);
+        if ($json === false) {
+            return '';
+        }
+        $lib = (string) ($CFG_GLPI['root_doc'] ?? '') . '/lib/echarts.min.js';
+
+        return "<section class='mf-chart' data-mf-chart-id='" . htmlspecialchars($id, ENT_QUOTES, 'UTF-8') . "'"
+            . " data-echarts='" . htmlspecialchars($lib, ENT_QUOTES, 'UTF-8') . "'"
+            . " data-mf-chart='" . htmlspecialchars($json, ENT_QUOTES, 'UTF-8') . "'></section>";
+    }
+}

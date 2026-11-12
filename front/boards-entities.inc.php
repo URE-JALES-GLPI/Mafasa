@@ -82,6 +82,14 @@ foreach ($entityOptions as $id => $entity) {
 echo "</div><small>" . mf_brd_esc(__('Nenhuma marcada = todas as escolas. Clique em "Gerar relatório" para aplicar.', 'mafasa')) . "</small>"
     . "</div></details></div>";
 
+if (TrallaReport::kanproAvailable()) {
+    echo "<div class='mf-field'><label for='mf-f-source'>" . mf_brd_esc(__('Fonte dos dados', 'mafasa')) . "</label><select id='mf-f-source' name='source'>";
+    foreach (['both' => 'Tralla + KanPro (histórico)', 'tralla' => 'Só Tralla', 'kanpro' => 'Só KanPro (antes do Tralla)'] as $k => $label) {
+        echo "<option value='" . mf_brd_esc($k) . "'" . ($k === ($result['source'] ?? 'both') ? ' selected' : '') . ">" . mf_brd_esc($label) . "</option>";
+    }
+    echo "</select></div>";
+}
+
 echo "<div class='mf-field'><label for='mf-f-scope'>" . mf_brd_esc(__('Situação', 'mafasa')) . "</label><select id='mf-f-scope' name='scope'>";
 foreach (['' => 'Todos (finalizados e com o técnico)', 'finalized' => 'Só finalizados', 'open' => 'Só em aberto (com o técnico)'] as $k => $label) {
     echo "<option value='" . mf_brd_esc($k) . "'" . ($k === $val('scope') ? ' selected' : '') . ">" . mf_brd_esc($label) . "</option>";
@@ -123,6 +131,14 @@ echo "<div class='mf-card'><strong>" . mf_brd_esc(__('Período', 'mafasa')) . ":
     . (count($result['rows']) - (int) ($result['with_cards'] ?? 0)) . " " . mf_brd_esc(__('sem', 'mafasa')) . ")"
     . "<br><small>" . mf_brd_esc(__('Conta os cards finalizados por estes técnicos (mês da finalização) ou que estão com eles em qualquer situação — em andamento, aguardando aprovação, retirada, pausado (mês em que pegaram o card)', 'mafasa') . ': '
         . ($names !== [] ? implode(', ', $names) : '—') . '.') . "</small>";
+if (($result['source'] ?? 'tralla') !== 'tralla' && !empty($result['kanpro']['available'])) {
+    $cut = $result['kanpro']['cutoff'] ?? null;
+    echo "<br><small>" . mf_brd_esc(sprintf(
+        __('Do KanPro entram %d card(s), finalizados pelos mesmos técnicos%s. O KanPro só vale antes do Tralla para não contar a mesma manutenção duas vezes.', 'mafasa'),
+        (int) ($result['kanpro']['count'] ?? 0),
+        $cut ? ' até ' . date('d/m/Y', strtotime($cut)) : ''
+    )) . "</small>";
+}
 if (!empty($range['capped'])) {
     echo "<br><small>" . mf_brd_esc(sprintf(__('Período limitado a %d meses.', 'mafasa'), TrallaReport::MAX_MONTHS)) . "</small>";
 }
@@ -133,6 +149,13 @@ if (!empty($result['error'])) {
 } elseif ($result['rows'] === []) {
     echo "<div class='mf-empty'>" . mf_brd_esc(__('Nenhum card nesse período.', 'mafasa')) . "</div>";
 } else {
+    $chartRows = array_values(array_filter($result['rows'], static fn ($r) => (int) $r['total'] > 0));
+    echo mafasa_chart_block('tralla-entidades', __('Cards por entidade e mês', 'mafasa'),
+        array_map(static fn ($r) => (string) $r['entity'], $chartRows),
+        array_map(static fn ($ym) => [
+            'name' => TrallaReport::monthLabel($ym),
+            'data' => array_map(static fn ($r) => (int) ($r['counts'][$ym] ?? 0), $chartRows),
+        ], $months), ['transpose' => true]);
     echo "<div class='mf-table-wrap'><table class='mf-table mf-table-pivot' id='mf-table'><thead><tr>";
     echo "<th>" . mf_brd_esc(__('Entidade', 'mafasa')) . "</th>";
     foreach ($months as $ym) {

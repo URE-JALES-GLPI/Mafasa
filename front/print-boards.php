@@ -66,6 +66,9 @@ if (($_GET['view'] ?? '') === 'entidades') {
         __('Período', 'mafasa') . ': ' . $period,
         sprintf(__('%d card(s); %d entidade(s), %d sem chamados', 'mafasa'), (int) $ent['grand'], count($ent['rows']),
             count($ent['rows']) - (int) ($ent['with_cards'] ?? 0)),
+        __('Fonte', 'mafasa') . ': ' . ([
+            'both' => 'Tralla + KanPro (histórico)', 'tralla' => 'Só Tralla', 'kanpro' => 'Só KanPro (antes do Tralla)',
+        ][$ent['source'] ?? 'tralla'] ?? 'Tralla'),
         __('Técnicos', 'mafasa') . ': ' . implode(', ', array_values($ent['finalizers']))
             . ' ' . __('(cards finalizados por eles ou que estão com eles)', 'mafasa'),
     ];

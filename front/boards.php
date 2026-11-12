@@ -331,6 +331,9 @@ if ($error) {
     if (empty($sumRows)) {
         echo "<div class='mf-empty'>" . mf_brd_esc(__('Nenhum cartão encontrado.', 'mafasa')) . "</div>";
     } else {
+        echo mafasa_chart_block('tralla-resumo-' . $currentMode, __('Cards por grupo', 'mafasa'),
+            array_map(static fn ($r) => (string) ($r['mf_label'] ?? '—'), $sumRows),
+            [['name' => __('Cartões', 'mafasa'), 'data' => array_map(static fn ($r) => (int) ($r['mf_total'] ?? 0), $sumRows)]]);
         echo "<div class='mf-table-wrap'><table class='mf-table' id='mf-table'><thead><tr>";
         if ($isChecklist) {
             echo "<th>" . mf_brd_esc(__('Item', 'mafasa')) . "</th>";

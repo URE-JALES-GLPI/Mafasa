@@ -63,3 +63,17 @@ Ela usa os filtros, a visão e as colunas selecionadas. O PDF segue o limite de
 ## Status
 
 v1.3.3 — download em PDF para todos os relatórios.
+
+## Gráficos (opcionais)
+
+Nos resumos de Chamados e Tralla, em **Por entidade e mês**, em **Ativos** (por tipo, quando há mais de um tipo
+selecionado) e em **Diversos** (entidades por nível) há o seletor **Gráfico**. Começa em *Sem gráfico*; as opções
+são Barras, Barras horizontais, Linha, Pizza e Rosca (ECharts, que já vem no GLPI). A escolha fica lembrada no navegador,
+por tela. Os gráficos não saem na impressão nem no PDF.
+
+## Fonte de dados do KanPro
+
+Em **Tralla → Por entidade e mês** há a fonte **Tralla + KanPro (histórico)**. Ela lê direto as tabelas do KanPro
+(`glpi_plugin_kanpro_*`), sem o plugin ativo: conta as manutenções finalizadas pelos mesmos técnicos
+(atividade `maintenance_finalize`) e só vale antes do primeiro card de manutenção do Tralla, para não contar a mesma
+manutenção duas vezes. **Desativar** o KanPro mantém as tabelas; **desinstalar** apaga e o histórico se perde.

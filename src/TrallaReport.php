@@ -435,13 +435,67 @@ class TrallaReport
         } catch (\Throwable $e) {
             return ['error' => self::sqlFailMessage($e)] + $empty;
         }
+        // Histórico do KanPro (o plugin pode estar desativado: só lê as tabelas que ficaram no banco).
+        $source = in_array($value('source'), ['tralla', 'kanpro', 'both'], true) ? $value('source') : 'both';
+        $kanproInfo = ['cutoff' => null, 'count' => 0, 'available' => self::kanproAvailable()];
+        if ($source !== 'tralla' && $kanproInfo['available']) {
+            try {
+                // O Tralla é a fonte a partir do 1º card de manutenção dele; o KanPro vale só antes disso,
+                // para a mesma manutenção nunca ser contada duas vezes.
+                $cutoffRow = $DB->doQuery(
+                    'SELECT MIN(c.`date_creation`) AS first FROM `glpi_plugin_tralla_cards` c'
+                    . ' INNER JOIN `glpi_plugin_tralla_boards` b ON b.`id` = c.`plugin_tralla_boards_id`'
+                    . " WHERE b.`type` = 'maintenance'"
+                )->fetch_assoc();
+                $cutoff = (string) ($cutoffRow['first'] ?? '');
+                $kanproInfo['cutoff'] = $cutoff !== '' ? $cutoff : null;
+                $kEnd = $source === 'kanpro' || $cutoff === '' ? $end : min($end, $cutoff);
+                $kSql = 'SELECT c.`id`, c.`entities_id`, ce.`name` AS entity_name, ce.`completename` AS entity_full,'
+                    . ' DATE_FORMAT(a.`date_creation`, \'%Y-%m\') AS ym'
+                    . ' FROM `glpi_plugin_kanpro_cards` c'
+                    . ' INNER JOIN (SELECT `plugin_kanpro_cards_id` AS cid, MAX(`id`) AS mid FROM `glpi_plugin_kanpro_activities`'
+                    . "     WHERE `action` = 'maintenance_finalize' GROUP BY `plugin_kanpro_cards_id`) la ON la.cid = c.`id`"
+                    . ' INNER JOIN `glpi_plugin_kanpro_activities` a ON a.`id` = la.mid'
+                    . ' LEFT JOIN `glpi_entities` ce ON ce.`id` = c.`entities_id`'
+                    . ' WHERE a.`users_id` IN (' . $ids . ')'
+                    . ' AND a.`date_creation` BETWEEN ' . self::quote($start) . ' AND ' . self::quote($kEnd);
+                if (function_exists('mafasa_entity_sql')) {
+                    $kSql .= (string) \mafasa_entity_sql('c');
+                }
+                if ((int) $value('finalizer_id') > 0 && isset($finalizers[(int) $value('finalizer_id')])) {
+                    $kSql .= ' AND a.`users_id` = ' . (int) $value('finalizer_id');
+                }
+                if ($chosen !== []) {
+                    $kSql .= ' AND c.`entities_id` IN (' . implode(',', $chosen) . ')';
+                }
+                $kRes = $DB->doQuery($kSql);
+                while (($raw = $kRes->fetch_assoc()) !== null) {
+                    $entityId = (int) ($raw['entities_id'] ?? 0);
+                    $ym = (string) $raw['ym'];
+                    if (!isset($totals[$ym])) {
+                        continue;
+                    }
+                    if (!isset($rows[$entityId])) {
+                        $rows[$entityId] = ['entity' => trim((string) ($raw['entity_name'] ?? '')) ?: 'Sem entidade',
+                            'full' => (string) ($raw['entity_full'] ?? ''), 'counts' => $blank, 'total' => 0];
+                    }
+                    $rows[$entityId]['counts'][$ym]++;
+                    $rows[$entityId]['total']++;
+                    $totals[$ym]++;
+                    $grand++;
+                    $kanproInfo['count']++;
+                }
+            } catch (\Throwable $e) {
+                return ['error' => 'Histórico do KanPro: ' . self::sqlFailMessage($e)] + $empty;
+            }
+        }
         $order = $value('order_by') === 'name' ? 'name' : 'total';
         uasort($rows, static fn (array $a, array $b): int => $order === 'name'
             ? strnatcasecmp($a['entity'], $b['entity'])
             : ([$b['total'], $a['entity']] <=> [$a['total'], $b['entity']]));
 
         return ['months' => $range['months'], 'rows' => array_values($rows), 'totals' => $totals, 'grand' => $grand,
-            'range' => $range, 'finalizers' => $finalizers, 'entities' => $chosen,
+            'range' => $range, 'finalizers' => $finalizers, 'entities' => $chosen, 'source' => $source, 'kanpro' => $kanproInfo,
             'with_cards' => count(array_filter($rows, static fn ($r) => $r['total'] > 0)), 'error' => null];
     }
 
@@ -480,6 +534,17 @@ class TrallaReport
         unset($entity);
         uasort($out, static fn ($a, $b) => strnatcasecmp($a['name'], $b['name']));
         return $cache = $out;
+    }
+
+    /** As tabelas do KanPro ainda existem no banco (o plugin pode estar desativado)? */
+    public static function kanproAvailable(): bool
+    {
+        global $DB;
+        try {
+            return $DB->tableExists('glpi_plugin_kanpro_cards') && $DB->tableExists('glpi_plugin_kanpro_activities');
+        } catch (\Throwable $e) {
+            return false;
+        }
     }
 
     /** Opções de quadro para os filtros da visão por entidade. */

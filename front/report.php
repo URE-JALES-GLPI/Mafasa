@@ -253,6 +253,20 @@ if ($hasError) {
     if (empty($rows)) {
         echo "<div class='mf-empty'>" . mf_report_esc(__('Nenhum registro encontrado.', 'mafasa')) . "</div>";
     } else {
+        // Gráfico opcional: quantos ativos há em cada tipo escolhido, com os mesmos filtros.
+        if (count($tokens) > 1) {
+            $chartLabels = [];
+            $chartCounts = [];
+            foreach ($tokens as $token) {
+                $part = Report::buildSearch([$token], $_GET, 1, 1, $sort, $order);
+                if (empty($part['error'])) {
+                    $chartLabels[] = Report::getTokenLabel($token);
+                    $chartCounts[] = (int) ($part['total'] ?? 0);
+                }
+            }
+            echo mafasa_chart_block('ativos-por-tipo', __('Ativos por tipo', 'mafasa'), $chartLabels,
+                [['name' => __('Ativos', 'mafasa'), 'data' => $chartCounts]]);
+        }
         echo "<div class='mf-table-wrap'><table class='mf-table' id='mf-table'><thead><tr>";
         foreach ($orderedCols as $colKey) {
             $nextOrder = ($sort === $colKey && $order === 'ASC') ? 'DESC' : 'ASC';

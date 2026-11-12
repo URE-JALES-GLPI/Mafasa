@@ -121,6 +121,15 @@ if ($error !== null) {
     if ($entities === []) {
         echo "<div class='mf-empty'>" . mf_div_esc(__('Nenhuma entidade encontrada.', 'mafasa')) . "</div>";
     } else {
+        $levels = [];
+        foreach ($entities as $entity) {
+            $depth = substr_count((string) $entity['completename'], ' > ') + 1;
+            $levels[$depth] = ($levels[$depth] ?? 0) + 1;
+        }
+        ksort($levels);
+        echo mafasa_chart_block('diversos-entidades', __('Entidades por nível', 'mafasa'),
+            array_map(static fn ($d) => sprintf(__('Nível %d', 'mafasa'), $d), array_keys($levels)),
+            [['name' => __('Entidades', 'mafasa'), 'data' => array_values($levels)]]);
         echo "<div class='mf-table-wrap'><table class='mf-table'><thead><tr><th>ID</th><th>"
             . mf_div_esc(__('Nome', 'mafasa')) . "</th><th>"
             . mf_div_esc(__('Nome completo', 'mafasa')) . "</th></tr></thead><tbody>";
@@ -131,5 +140,6 @@ if ($error !== null) {
         echo "</tbody></table></div>";
     }
 }
+echo "<script src='" . mf_div_esc($webdir . '/public/js/app.js?v=' . PLUGIN_MAFASA_VERSION) . "'></script>";
 echo "</div></div>";
 Html::footer();

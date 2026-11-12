@@ -325,6 +325,9 @@ if ($error) {
     if (empty($sumRows)) {
         echo "<div class='mf-empty'>" . mf_tix_esc(__('Nenhum chamado encontrado.', 'mafasa')) . "</div>";
     } else {
+        echo mafasa_chart_block('tickets-resumo-' . $currentMode, __('Chamados por grupo', 'mafasa'),
+            array_map(static fn ($r) => (string) ($r['mf_label'] ?? '—'), $sumRows),
+            [['name' => __('Chamados', 'mafasa'), 'data' => array_map(static fn ($r) => (int) ($r['mf_total'] ?? 0), $sumRows)]]);
         echo "<div class='mf-table-wrap'><table class='mf-table' id='mf-table'><thead><tr>";
         echo "<th>" . mf_tix_esc(__('Grupo', 'mafasa')) . "</th>";
         echo "<th>" . mf_tix_esc(__('Chamados', 'mafasa')) . "</th>";

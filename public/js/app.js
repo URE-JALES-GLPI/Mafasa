@@ -176,3 +176,173 @@
     });
   }
 })();
+
+/**
+ * Mafasa - gráficos opcionais (ECharts do GLPI). Cinco modelos: barras, barras horizontais,
+ * linha, pizza e rosca. Começa sempre desligado; a escolha fica lembrada por tela neste navegador.
+ */
+(function () {
+  'use strict';
+
+  var TYPES = [
+    ['', 'Sem gráfico'],
+    ['bar', 'Barras'],
+    ['hbar', 'Barras horizontais'],
+    ['line', 'Linha'],
+    ['pie', 'Pizza'],
+    ['donut', 'Rosca']
+  ];
+  var PALETTE = ['#0079bf', '#2bb673', '#f2a000', '#e45959', '#8b5cf6', '#14b8c4', '#e0559a', '#7c8a9a', '#a3c93a', '#d97706'];
+  var MAX_ITEMS = 15;
+  var echartsPromise = null;
+
+  function store(key, value) {
+    try {
+      if (value === undefined) { return window.localStorage.getItem(key); }
+      window.localStorage.setItem(key, value);
+    } catch (e) { /* armazenamento bloqueado: não lembra a escolha */ }
+    return null;
+  }
+
+  function loadEcharts(src) {
+    if (window.echarts) { return Promise.resolve(window.echarts); }
+    if (!echartsPromise) {
+      echartsPromise = new Promise(function (resolve, reject) {
+        var el = document.createElement('script');
+        el.src = src;
+        el.onload = function () { resolve(window.echarts); };
+        el.onerror = function () { echartsPromise = null; reject(new Error('Não foi possível carregar a biblioteca de gráficos.')); };
+        document.head.appendChild(el);
+      });
+    }
+    return echartsPromise;
+  }
+
+  function sum(list) { return list.reduce(function (a, b) { return a + b; }, 0); }
+
+  /* Muitos itens poluem o gráfico: fica com os maiores e agrupa o resto em "Outros". */
+  function limited(categories, series) {
+    var totals = categories.map(function (_, i) {
+      return sum(series.map(function (s) { return s.data[i] || 0; }));
+    });
+    var order = totals.map(function (t, i) { return i; }).sort(function (a, b) { return totals[b] - totals[a]; });
+    if (categories.length <= MAX_ITEMS) { return { categories: categories, series: series, grouped: 0 }; }
+    var keep = order.slice(0, MAX_ITEMS - 1).sort(function (a, b) { return a - b; });
+    var rest = order.slice(MAX_ITEMS - 1);
+    var cats = keep.map(function (i) { return categories[i]; }).concat(['Outros (' + rest.length + ')']);
+    var out = series.map(function (s) {
+      var data = keep.map(function (i) { return s.data[i] || 0; });
+      data.push(sum(rest.map(function (i) { return s.data[i] || 0; })));
+      return { name: s.name, data: data };
+    });
+    return { categories: cats, series: out, grouped: rest.length };
+  }
+
+  function build(echarts, cfg, kind) {
+    var text = getComputedStyle(document.body).color || '#334155';
+    var grid = 'rgba(120,130,150,.25)';
+    var data = { categories: cfg.categories, series: cfg.series };
+
+    // Linha com linhas=entidades e colunas=meses: o tempo vai no eixo X.
+    if (cfg.transpose && kind === 'line' && cfg.series.length > 1) {
+      var top = limited(cfg.categories, cfg.series);
+      data = {
+        categories: cfg.series.map(function (s) { return s.name; }),
+        series: top.categories.map(function (name, i) {
+          return { name: name, data: top.series.map(function (s) { return s.data[i]; }) };
+        })
+      };
+    } else {
+      var lim = limited(cfg.categories, cfg.series);
+      data = { categories: lim.categories, series: lim.series };
+    }
+
+    var common = { color: PALETTE, animation: false, textStyle: { color: text },
+      tooltip: { trigger: kind === 'pie' || kind === 'donut' ? 'item' : 'axis', confine: true } };
+    var multi = data.series.length > 1;
+    var legend = { type: 'scroll', bottom: 0, textStyle: { color: text } };
+
+    if (kind === 'pie' || kind === 'donut') {
+      // Pizza e rosca usam um valor por item (com vários meses, a soma).
+      var slices = data.categories.map(function (name, i) {
+        return { name: name, value: sum(data.series.map(function (s) { return s.data[i] || 0; })) };
+      }).filter(function (d) { return d.value > 0; });
+      return Object.assign(common, {
+        legend: legend,
+        series: [{
+          type: 'pie', radius: kind === 'donut' ? ['45%', '70%'] : '68%', center: ['50%', '45%'], data: slices,
+          label: { color: text, formatter: '{b}: {c} ({d}%)' }, avoidLabelOverlap: true
+        }]
+      });
+    }
+
+    var horizontal = kind === 'hbar';
+    var catAxis = { type: 'category', data: data.categories, axisLabel: { color: text, interval: 0, width: horizontal ? 220 : 90, overflow: 'truncate' },
+      inverse: horizontal, axisLine: { lineStyle: { color: grid } } };
+    var valAxis = { type: 'value', minInterval: 1, axisLabel: { color: text }, splitLine: { lineStyle: { color: grid, type: 'dashed' } } };
+    return Object.assign(common, {
+      legend: multi ? legend : undefined,
+      grid: { left: 12, right: 24, top: 18, bottom: multi ? 46 : 22, containLabel: true },
+      xAxis: horizontal ? valAxis : catAxis,
+      yAxis: horizontal ? catAxis : valAxis,
+      series: data.series.map(function (s) {
+        var item = { name: s.name, data: s.data, type: kind === 'line' ? 'line' : 'bar', emphasis: { focus: 'series' } };
+        if (kind === 'line') { item.smooth = true; item.symbolSize = 6; item.areaStyle = { opacity: .08 }; }
+        else { item.barMaxWidth = 38; item.label = { show: !multi, position: horizontal ? 'right' : 'top', color: text }; }
+        return item;
+      })
+    });
+  }
+
+  function mount(section) {
+    var cfg;
+    try { cfg = JSON.parse(section.getAttribute('data-mf-chart')); } catch (e) { return; }
+    var id = section.getAttribute('data-mf-chart-id') || 'chart';
+    var key = 'mafasa.chart.' + id;
+
+    section.innerHTML = '<div class="mf-chart-bar"><label>Gráfico <select class="mf-chart-kind" aria-label="Tipo de gráfico"></select></label>'
+      + '<span class="mf-chart-title"></span></div><div class="mf-chart-canvas" hidden></div><p class="mf-chart-msg" hidden></p>';
+    var select = section.querySelector('select');
+    TYPES.forEach(function (t) {
+      var o = document.createElement('option');
+      o.value = t[0]; o.textContent = t[1];
+      select.appendChild(o);
+    });
+    section.querySelector('.mf-chart-title').textContent = cfg.title || '';
+    var canvas = section.querySelector('.mf-chart-canvas');
+    var msg = section.querySelector('.mf-chart-msg');
+    var instance = null;
+
+    async function draw() {
+      var kind = select.value;
+      store(key, kind);
+      if (!kind) {
+        canvas.hidden = true;
+        msg.hidden = true;
+        if (instance) { instance.dispose(); instance = null; }
+        return;
+      }
+      try {
+        var echarts = await loadEcharts(section.getAttribute('data-echarts'));
+        canvas.hidden = false;
+        msg.hidden = true;
+        if (!instance) { instance = echarts.init(canvas); }
+        instance.setOption(build(echarts, cfg, kind), true);
+        instance.resize();
+      } catch (error) {
+        msg.textContent = error.message;
+        msg.hidden = false;
+      }
+    }
+
+    select.value = store(key) || '';
+    if (select.value !== (store(key) || '')) { select.value = ''; }
+    select.addEventListener('change', draw);
+    window.addEventListener('resize', function () { if (instance) { instance.resize(); } });
+    draw();
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('[data-mf-chart]').forEach(mount);
+  });
+})();

@@ -451,3 +451,14 @@
 .mf-entity-item { align-items: center; border-radius: 6px; cursor: pointer; display: flex; gap: 6px; padding: 3px 6px; }
 .mf-entity-item:hover { background: rgba(47, 111, 179, .08); }
 .mf-entity-item[hidden] { display: none; }
+
+/* Gráficos opcionais */
+.mf-chart { background: #fff; border: 1px solid #dfe3ea; border-radius: 10px; margin: 12px 0; padding: 10px 14px; }
+.mf-chart-bar { align-items: center; display: flex; flex-wrap: wrap; gap: 12px; }
+.mf-chart-bar label { align-items: center; display: inline-flex; font-weight: 600; gap: 8px; margin: 0; }
+.mf-chart-bar select { border: 1px solid #ccd5e1; border-radius: 6px; padding: 4px 8px; }
+.mf-chart-title { color: #6b778c; font-size: .85rem; }
+.mf-chart-canvas { height: 360px; margin-top: 10px; width: 100%; }
+.mf-chart-canvas[hidden], .mf-chart-msg[hidden] { display: none; }
+.mf-chart-msg { color: #c62828; margin: 8px 0 0; }
+@media print { .mf-chart { display: none; } }
