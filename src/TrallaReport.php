@@ -330,8 +330,11 @@ class TrallaReport
     }
 
     /**
-     * Tabela entidade x mês: cards cuja última finalização ("Manutenção finalizada" no histórico
-     * do Tralla) caiu no período e foi feita por um dos FINALIZER_EMAILS.
+     * Tabela entidade x mês: cards ligados a um dos FINALIZER_EMAILS — finalizados por ele
+     * (última "Manutenção finalizada" do histórico) ou ainda com ele como técnico, em qualquer
+     * situação (em andamento, aguardando aprovação, retirada, pausado...).
+     * Mês do card: data da finalização; se ainda não foi finalizado por um deles, data em que
+     * o técnico pegou o card (ou a criação, se ainda não pegou).
      */
     public static function buildEntityMonthly(array $params): array
     {
@@ -356,18 +359,24 @@ class TrallaReport
         $start = $range['from'] . '-01 00:00:00';
         $end = (new \DateTime($range['to'] . '-01'))->modify('last day of this month')->format('Y-m-d') . ' 23:59:59';
 
-        $sql = 'SELECT c.`id`, ce.`name` AS entity_name, ce.`completename` AS entity_full, DATE_FORMAT(h.`date_creation`, \'%Y-%m\') AS ym'
+        $ids = implode(',', array_map('intval', array_keys($finalizers)));
+        // Finalizado por um dos técnicos? Senão vale quem está com o card agora.
+        $byTeam = 'h.`users_id` IN (' . $ids . ')';
+        $refDate = 'CASE WHEN ' . $byTeam . ' THEN h.`date_creation` ELSE COALESCE(c.`date_taken`, c.`date_creation`) END';
+        $person = 'CASE WHEN ' . $byTeam . ' THEN h.`users_id` ELSE c.`technician_id` END';
+        $sql = 'SELECT c.`id`, ce.`name` AS entity_name, ce.`completename` AS entity_full,'
+            . ' DATE_FORMAT(' . $refDate . ', \'%Y-%m\') AS ym, (' . $byTeam . ') AS finalized'
             . ' FROM `glpi_plugin_tralla_cards` c'
             . ' INNER JOIN `glpi_plugin_tralla_boards` b ON b.`id` = c.`plugin_tralla_boards_id`'
-            . ' INNER JOIN (SELECT `plugin_tralla_cards_id` AS cid, MAX(`id`) AS mid FROM `glpi_plugin_tralla_history`'
+            . ' LEFT JOIN (SELECT `plugin_tralla_cards_id` AS cid, MAX(`id`) AS mid FROM `glpi_plugin_tralla_history`'
             . "     WHERE `action` = 'card_finalized' GROUP BY `plugin_tralla_cards_id`) lh ON lh.cid = c.`id`"
-            . ' INNER JOIN `glpi_plugin_tralla_history` h ON h.`id` = lh.mid'
+            . ' LEFT JOIN `glpi_plugin_tralla_history` h ON h.`id` = lh.mid'
             . ' LEFT JOIN `glpi_entities` ce ON ce.`id` = c.`entities_id`'
             // Arquivados entram: cards de uma mesma família são arquivados quando as máquinas são reunidas.
             . ' WHERE c.`stage` = 1 AND c.`is_deleted` = 0'
             . ' AND c.`plugin_tralla_boards_id` IN (' . implode(',', array_map('intval', $boards)) . ')'
-            . ' AND h.`users_id` IN (' . implode(',', array_map('intval', array_keys($finalizers))) . ')'
-            . ' AND h.`date_creation` BETWEEN ' . self::quote($start) . ' AND ' . self::quote($end);
+            . ' AND (' . $byTeam . ' OR c.`technician_id` IN (' . $ids . '))'
+            . ' AND ' . $refDate . ' BETWEEN ' . self::quote($start) . ' AND ' . self::quote($end);
         if ($DB->fieldExists('glpi_plugin_tralla_cards', 'is_draft')) {
             $sql .= ' AND c.`is_draft` = 0';
         }
@@ -381,7 +390,12 @@ class TrallaReport
             $sql .= ' AND c.`workflow_type` = ' . self::quote($value('workflow_type'));
         }
         if ((int) $value('finalizer_id') > 0 && isset($finalizers[(int) $value('finalizer_id')])) {
-            $sql .= ' AND h.`users_id` = ' . (int) $value('finalizer_id');
+            $sql .= ' AND ' . $person . ' = ' . (int) $value('finalizer_id');
+        }
+        if ($value('scope') === 'finalized') {
+            $sql .= ' AND ' . $byTeam;
+        } elseif ($value('scope') === 'open') {
+            $sql .= ' AND NOT (' . $byTeam . ' AND h.`users_id` IS NOT NULL)';
         }
 
         $rows = [];

@@ -48,8 +48,9 @@ Ferramentas → Indicadores não aparece e as telas respondem "sem permissão".
 - **Quadros Tralla** (`front/boards.php`): cartões por quadro/lista/membro,
   prazos, checklists e vínculo com chamados. Requer o plugin Tralla ativo.
   Aba **Por entidade e mês**: cards por entidade em cada mês (um mês, vários ou
-  de um mês até outro), contando só os finalizados pelos técnicos listados em
-  `TrallaReport::FINALIZER_EMAILS`; imprime e exporta PDF.
+  de um mês até outro), contando os cards finalizados pelos técnicos listados em
+  `TrallaReport::FINALIZER_EMAILS` ou que estão com eles em qualquer situação;
+  imprime e exporta PDF.
 - **Diversos** (`front/diversos.php`): lista os nomes das entidades do GLPI e
   permite baixar um CSV ou PDF completo com ID, nome e nome completo. Respeita as
   entidades visíveis no contexto ativo do usuário; quem pode visualizar todas

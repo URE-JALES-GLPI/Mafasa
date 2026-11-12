@@ -59,7 +59,8 @@ if (($_GET['view'] ?? '') === 'entidades') {
         sprintf(__('Gerado em %s', 'mafasa'), Html::convDateTime(date('Y-m-d H:i:s'))),
         __('Período', 'mafasa') . ': ' . $period,
         sprintf(__('%d card(s) em %d entidade(s)', 'mafasa'), (int) $ent['grand'], count($ent['rows'])),
-        __('Finalizados por', 'mafasa') . ': ' . implode(', ', array_values($ent['finalizers'])),
+        __('Técnicos', 'mafasa') . ': ' . implode(', ', array_values($ent['finalizers']))
+            . ' ' . __('(cards finalizados por eles ou que estão com eles)', 'mafasa'),
     ];
     if (($_GET['format'] ?? '') === 'pdf') {
         if (!empty($ent['error'])) {
@@ -88,7 +89,7 @@ if (($_GET['view'] ?? '') === 'entidades') {
     if (!empty($ent['error'])) {
         echo '<div class="mf-print-warning" role="alert">' . $e($ent['error']) . '</div>';
     } elseif ($body === []) {
-        echo '<p class="mf-print-empty">' . $e(__('Nenhum card finalizado nesse período.', 'mafasa')) . '</p>';
+        echo '<p class="mf-print-empty">' . $e(__('Nenhum card nesse período.', 'mafasa')) . '</p>';
     } else {
         echo '<table class="mf-print-table"><thead><tr>';
         foreach ($headers as $i => $hd) {

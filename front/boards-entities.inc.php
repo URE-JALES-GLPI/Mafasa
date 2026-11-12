@@ -53,10 +53,16 @@ foreach (['' => __('Todos', 'mafasa'), 'maintenance' => 'Manutenção', 'call' =
 }
 echo "</select></div>";
 
-echo "<div class='mf-field'><label for='mf-f-finalizer_id'>" . mf_brd_esc(__('Finalizado por', 'mafasa')) . "</label><select id='mf-f-finalizer_id' name='finalizer_id'>"
+echo "<div class='mf-field'><label for='mf-f-finalizer_id'>" . mf_brd_esc(__('Técnico', 'mafasa')) . "</label><select id='mf-f-finalizer_id' name='finalizer_id'>"
     . "<option value=''>" . mf_brd_esc(__('Todos os técnicos do relatório', 'mafasa')) . "</option>";
 foreach ($result['finalizers'] as $id => $name) {
     echo "<option value='" . (int) $id . "'" . ((string) $id === $val('finalizer_id') ? ' selected' : '') . ">" . mf_brd_esc($name) . "</option>";
+}
+echo "</select></div>";
+
+echo "<div class='mf-field'><label for='mf-f-scope'>" . mf_brd_esc(__('Situação', 'mafasa')) . "</label><select id='mf-f-scope' name='scope'>";
+foreach (['' => 'Todos (finalizados e com o técnico)', 'finalized' => 'Só finalizados', 'open' => 'Só em aberto (com o técnico)'] as $k => $label) {
+    echo "<option value='" . mf_brd_esc($k) . "'" . ($k === $val('scope') ? ' selected' : '') . ">" . mf_brd_esc($label) . "</option>";
 }
 echo "</select></div>";
 
@@ -91,7 +97,7 @@ echo "<div class='mf-card'><strong>" . mf_brd_esc(__('Período', 'mafasa')) . ":
     . mf_brd_esc(TrallaReport::monthLabel($range['from']) . ($range['from'] !== $range['to'] ? ' a ' . TrallaReport::monthLabel($range['to']) : ''))
     . " &nbsp;|&nbsp; <strong>" . mf_brd_esc(__('Cards', 'mafasa')) . ":</strong> " . (int) $result['grand']
     . " &nbsp;|&nbsp; <strong>" . mf_brd_esc(__('Entidades', 'mafasa')) . ":</strong> " . count($result['rows'])
-    . "<br><small>" . mf_brd_esc(__('Conta cada card pela data em que foi finalizado, só quando quem finalizou foi', 'mafasa') . ': '
+    . "<br><small>" . mf_brd_esc(__('Conta os cards finalizados por estes técnicos (mês da finalização) ou que estão com eles em qualquer situação — em andamento, aguardando aprovação, retirada, pausado (mês em que pegaram o card)', 'mafasa') . ': '
         . ($names !== [] ? implode(', ', $names) : '—') . '.') . "</small>";
 if (!empty($range['capped'])) {
     echo "<br><small>" . mf_brd_esc(sprintf(__('Período limitado a %d meses.', 'mafasa'), TrallaReport::MAX_MONTHS)) . "</small>";
@@ -101,7 +107,7 @@ echo "</div>";
 if (!empty($result['error'])) {
     echo "<div class='mf-warning' role='alert'>" . mf_brd_esc((string) $result['error']) . "</div>";
 } elseif ($result['rows'] === []) {
-    echo "<div class='mf-empty'>" . mf_brd_esc(__('Nenhum card finalizado nesse período.', 'mafasa')) . "</div>";
+    echo "<div class='mf-empty'>" . mf_brd_esc(__('Nenhum card nesse período.', 'mafasa')) . "</div>";
 } else {
     echo "<div class='mf-table-wrap'><table class='mf-table mf-table-pivot' id='mf-table'><thead><tr>";
     echo "<th>" . mf_brd_esc(__('Entidade', 'mafasa')) . "</th>";
