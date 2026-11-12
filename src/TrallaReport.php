@@ -452,7 +452,7 @@ class TrallaReport
                 $kEnd = $source === 'kanpro' || $cutoff === '' ? $end : min($end, $cutoff);
                 $kSql = 'SELECT h.`kanpro_cards_id` AS id, h.`entities_id`, COALESCE(ce.`name`, h.`entity_name`) AS entity_name,'
                     . ' COALESCE(ce.`completename`, h.`entity_full`) AS entity_full,'
-                    . ' DATE_FORMAT(h.`finalized_at`, '%Y-%m') AS ym'
+                    . ' DATE_FORMAT(h.`finalized_at`, \'%Y-%m\') AS ym'
                     . ' FROM `' . self::KANPRO_TABLE . '` h'
                     . ' LEFT JOIN `glpi_entities` ce ON ce.`id` = h.`entities_id`'
                     . ' WHERE h.`users_id` IN (' . $ids . ')'
