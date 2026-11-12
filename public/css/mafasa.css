@@ -431,3 +431,9 @@
         font-size: 0.85rem;
     }
 }
+
+/* Quadros Tralla — cards por entidade e mês */
+.mf-table-pivot .mf-num { text-align: right; white-space: nowrap; }
+.mf-table-pivot .mf-zero { color: #9aa5b5; }
+.mf-table-pivot tfoot th { border-top: 2px solid currentColor; }
+.mf-shortcuts { flex-wrap: wrap; margin-top: 10px; }

@@ -24,7 +24,7 @@ if (!$report::canView()) {
     return;
 }
 
-$view = (($_GET['view'] ?? 'lista') === 'resumo') ? 'resumo' : 'lista';
+$view = in_array(($_GET['view'] ?? 'lista'), ['resumo', 'entidades'], true) ? (string) $_GET['view'] : 'lista';
 $available = $report::available();
 $filters = $report::getFilters();
 $columns = $report::getColumns();
@@ -98,7 +98,9 @@ if (!array_key_exists($sort, $columns)) {
 $order = (strtoupper((string)($_GET['order'] ?? 'ASC')) === 'DESC') ? 'DESC' : 'ASC';
 $page = max(1, (int)($_GET['page'] ?? 1));
 
-if ($view === 'lista') {
+if ($view === 'entidades') {
+    $result = $report::buildEntityMonthly($_GET);
+} elseif ($view === 'lista') {
     $result = $report::buildList($_GET, $page, $report::PAGE_SIZE, $sort, $order);
 } else {
     $mode = (string)($_GET['mode'] ?? 'board');
@@ -159,7 +161,17 @@ echo "<a class='mf-tab" . ($view === 'lista' ? ' mf-tab-active' : '') . "' href=
 echo "<a class='mf-tab" . ($view === 'resumo' ? ' mf-tab-active' : '') . "' href='boards.php?"
     . mf_brd_esc(mf_brd_qs(['view' => 'resumo'], ['page'])) . "'>"
     . mf_brd_esc(__('Resumo', 'mafasa')) . "</a>";
+echo "<a class='mf-tab" . ($view === 'entidades' ? ' mf-tab-active' : '') . "' href='boards.php?view=entidades'>"
+    . mf_brd_esc(__('Por entidade e mês', 'mafasa')) . "</a>";
 echo "</div>";
+
+if ($view === 'entidades') {
+    require __DIR__ . '/boards-entities.inc.php';
+    echo "<script src='" . mf_brd_esc($webdir . '/public/js/app.js?v=' . PLUGIN_MAFASA_VERSION) . "'></script>";
+    echo "</div>";
+    Html::footer();
+    return;
+}
 
 echo "<form id='mf-form' method='get'>";
 echo "<input type='hidden' name='view' value='" . mf_brd_esc($view) . "'>";

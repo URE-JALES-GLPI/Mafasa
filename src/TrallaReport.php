@@ -265,6 +265,164 @@ class TrallaReport
     }
 
     // ------------------------------------------------------------------
+    // Cards por entidade e mês (finalizados pelos técnicos da URE)
+    // ------------------------------------------------------------------
+
+    /** Só contam os cards finalizados por estes usuários (e-mail do GLPI). */
+    public const FINALIZER_EMAILS = [
+        'gabriel.nsiqueira@apoiofde.sp.gov.br',
+        'leonardo.facao@apoiofde.sp.gov.br',
+        'marco.masson@apoiofde.sp.gov.br',
+        'aryan.ferrari@apoiofde.sp.gov.br',
+    ];
+    public const MAX_MONTHS = 24;
+    private const MONTH_NAMES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+
+    /** Usuários (id => nome) dos e-mails acima. */
+    public static function finalizers(): array
+    {
+        global $DB;
+        $out = [];
+        try {
+            foreach ($DB->request([
+                'SELECT'     => ['u.id', 'u.name', 'u.firstname', 'u.realname'],
+                'DISTINCT'   => true,
+                'FROM'       => 'glpi_useremails AS e',
+                'INNER JOIN' => ['glpi_users AS u' => ['ON' => ['u' => 'id', 'e' => 'users_id']]],
+                'WHERE'      => ['e.email' => self::FINALIZER_EMAILS],
+            ]) as $row) {
+                $name = trim((string) $row['firstname'] . ' ' . (string) $row['realname']);
+                $out[(int) $row['id']] = $name !== '' ? $name : (string) $row['name'];
+            }
+        } catch (\Throwable $e) {
+            return [];
+        }
+        asort($out);
+        return $out;
+    }
+
+    /** "2026-11" -> "nov/2026". */
+    public static function monthLabel(string $ym): string
+    {
+        [$y, $m] = array_map('intval', explode('-', $ym) + [0, 0]);
+        return (self::MONTH_NAMES[$m - 1] ?? (string) $m) . '/' . $y;
+    }
+
+    /** Período pedido (mês inicial e final, YYYY-MM); padrão: mês atual. */
+    public static function monthRange(array $params): array
+    {
+        $read = static function (string $key) use ($params): ?string {
+            $v = is_scalar($params[$key] ?? null) ? trim((string) $params[$key]) : '';
+            return preg_match('/^(\d{4})-(0[1-9]|1[0-2])$/', $v) ? $v : null;
+        };
+        $from = $read('month_from') ?? date('Y-m');
+        $to = $read('month_to') ?? $from;
+        if ($to < $from) {
+            [$from, $to] = [$to, $from];
+        }
+        $months = [];
+        $cursor = new \DateTime($from . '-01');
+        while ($cursor->format('Y-m') <= $to && count($months) < self::MAX_MONTHS) {
+            $months[] = $cursor->format('Y-m');
+            $cursor->modify('+1 month');
+        }
+        return ['from' => $from, 'to' => end($months), 'months' => $months, 'capped' => end($months) !== $to];
+    }
+
+    /**
+     * Tabela entidade x mês: cards cuja última finalização ("Manutenção finalizada" no histórico
+     * do Tralla) caiu no período e foi feita por um dos FINALIZER_EMAILS.
+     */
+    public static function buildEntityMonthly(array $params): array
+    {
+        $range = self::monthRange($params);
+        $empty = ['months' => $range['months'], 'rows' => [], 'totals' => [], 'grand' => 0,
+            'range' => $range, 'finalizers' => [], 'error' => null];
+        if (!self::available()) {
+            return ['error' => 'O plugin Tralla não está ativo.'] + $empty;
+        }
+        $finalizers = self::finalizers();
+        $empty['finalizers'] = $finalizers;
+        if ($finalizers === []) {
+            return ['error' => 'Nenhum dos usuários do relatório foi encontrado pelo e-mail no GLPI.'] + $empty;
+        }
+
+        global $DB;
+        $boards = array_keys(self::boardChoices());
+        if ($boards === []) {
+            return $empty;
+        }
+        $value = static fn (string $key): string => is_scalar($params[$key] ?? null) ? trim((string) $params[$key]) : '';
+        $start = $range['from'] . '-01 00:00:00';
+        $end = (new \DateTime($range['to'] . '-01'))->modify('last day of this month')->format('Y-m-d') . ' 23:59:59';
+
+        $sql = 'SELECT c.`id`, ce.`name` AS entity_name, ce.`completename` AS entity_full, DATE_FORMAT(h.`date_creation`, \'%Y-%m\') AS ym'
+            . ' FROM `glpi_plugin_tralla_cards` c'
+            . ' INNER JOIN `glpi_plugin_tralla_boards` b ON b.`id` = c.`plugin_tralla_boards_id`'
+            . ' INNER JOIN (SELECT `plugin_tralla_cards_id` AS cid, MAX(`id`) AS mid FROM `glpi_plugin_tralla_history`'
+            . "     WHERE `action` = 'card_finalized' GROUP BY `plugin_tralla_cards_id`) lh ON lh.cid = c.`id`"
+            . ' INNER JOIN `glpi_plugin_tralla_history` h ON h.`id` = lh.mid'
+            . ' LEFT JOIN `glpi_entities` ce ON ce.`id` = c.`entities_id`'
+            // Arquivados entram: cards de uma mesma família são arquivados quando as máquinas são reunidas.
+            . ' WHERE c.`stage` = 1 AND c.`is_deleted` = 0'
+            . ' AND c.`plugin_tralla_boards_id` IN (' . implode(',', array_map('intval', $boards)) . ')'
+            . ' AND h.`users_id` IN (' . implode(',', array_map('intval', array_keys($finalizers))) . ')'
+            . ' AND h.`date_creation` BETWEEN ' . self::quote($start) . ' AND ' . self::quote($end);
+        if ($DB->fieldExists('glpi_plugin_tralla_cards', 'is_draft')) {
+            $sql .= ' AND c.`is_draft` = 0';
+        }
+        if (function_exists('mafasa_entity_sql')) {
+            $sql .= (string) \mafasa_entity_sql('b');
+        }
+        if ((int) $value('boards_id') > 0) {
+            $sql .= ' AND c.`plugin_tralla_boards_id` = ' . (int) $value('boards_id');
+        }
+        if (in_array($value('workflow_type'), ['maintenance', 'call'], true)) {
+            $sql .= ' AND c.`workflow_type` = ' . self::quote($value('workflow_type'));
+        }
+        if ((int) $value('finalizer_id') > 0 && isset($finalizers[(int) $value('finalizer_id')])) {
+            $sql .= ' AND h.`users_id` = ' . (int) $value('finalizer_id');
+        }
+
+        $rows = [];
+        $totals = array_fill_keys($range['months'], 0);
+        $grand = 0;
+        try {
+            $res = $DB->doQuery($sql);
+            while (($raw = $res->fetch_assoc()) !== null) {
+                $entity = trim((string) ($raw['entity_name'] ?? '')) ?: 'Sem entidade';
+                $ym = (string) $raw['ym'];
+                if (!isset($totals[$ym])) {
+                    continue;
+                }
+                if (!isset($rows[$entity])) {
+                    $rows[$entity] = ['entity' => $entity, 'full' => (string) ($raw['entity_full'] ?? ''),
+                        'counts' => array_fill_keys($range['months'], 0), 'total' => 0];
+                }
+                $rows[$entity]['counts'][$ym]++;
+                $rows[$entity]['total']++;
+                $totals[$ym]++;
+                $grand++;
+            }
+        } catch (\Throwable $e) {
+            return ['error' => self::sqlFailMessage($e)] + $empty;
+        }
+        $order = $value('order_by') === 'name' ? 'name' : 'total';
+        uasort($rows, static fn (array $a, array $b): int => $order === 'name'
+            ? strnatcasecmp($a['entity'], $b['entity'])
+            : ([$b['total'], $a['entity']] <=> [$a['total'], $b['entity']]));
+
+        return ['months' => $range['months'], 'rows' => array_values($rows), 'totals' => $totals, 'grand' => $grand,
+            'range' => $range, 'finalizers' => $finalizers, 'error' => null];
+    }
+
+    /** Opções de quadro para os filtros da visão por entidade. */
+    public static function boardOptions(): array
+    {
+        return self::boardChoices();
+    }
+
+    // ------------------------------------------------------------------
     // Internos
     // ------------------------------------------------------------------
 

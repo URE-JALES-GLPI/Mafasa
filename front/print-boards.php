@@ -27,6 +27,90 @@ if (!$report::canView()) {
 
 $available = $report::available();
 $view = (($_GET['view'] ?? 'lista') === 'resumo') ? 'resumo' : 'lista';
+
+// ---- Visão por entidade e mês: tabela entidade x mês ----
+if (($_GET['view'] ?? '') === 'entidades') {
+    $ent = $report::buildEntityMonthly($_GET);
+    $months = $ent['months'];
+    $multi = count($months) > 1;
+    $headers = array_merge([__('Entidade', 'mafasa')], array_map([$report, 'monthLabel'], $months), $multi ? [__('Total', 'mafasa')] : []);
+    $body = [];
+    foreach ($ent['rows'] as $row) {
+        $line = [$row['entity']];
+        foreach ($months as $ym) {
+            $line[] = (string) (int) ($row['counts'][$ym] ?? 0);
+        }
+        if ($multi) {
+            $line[] = (string) (int) $row['total'];
+        }
+        $body[] = $line;
+    }
+    $foot = [__('Total', 'mafasa')];
+    foreach ($months as $ym) {
+        $foot[] = (string) (int) ($ent['totals'][$ym] ?? 0);
+    }
+    if ($multi) {
+        $foot[] = (string) (int) $ent['grand'];
+    }
+    $period = $report::monthLabel($ent['range']['from'])
+        . ($ent['range']['from'] !== $ent['range']['to'] ? ' a ' . $report::monthLabel($ent['range']['to']) : '');
+    $title = __('[URE] Mafasa — Cards por entidade e mês', 'mafasa');
+    $details = [
+        sprintf(__('Gerado em %s', 'mafasa'), Html::convDateTime(date('Y-m-d H:i:s'))),
+        __('Período', 'mafasa') . ': ' . $period,
+        sprintf(__('%d card(s) em %d entidade(s)', 'mafasa'), (int) $ent['grand'], count($ent['rows'])),
+        __('Finalizados por', 'mafasa') . ': ' . implode(', ', array_values($ent['finalizers'])),
+    ];
+    if (($_GET['format'] ?? '') === 'pdf') {
+        if (!empty($ent['error'])) {
+            http_response_code(500);
+            echo htmlspecialchars((string) $ent['error'], ENT_QUOTES, 'UTF-8');
+            return;
+        }
+        PdfExport::download('cards-por-entidade.pdf', $title, $headers, array_merge($body, [$foot]), $details, MafasaConfig::getFooterText());
+        return;
+    }
+    $e = static fn ($v): string => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');
+    $cssPath = __DIR__ . '/../public/css/mafasa-print.css';
+    $cssUrl = mafasa_web_dir('mafasa') . '/public/css/mafasa-print.css' . (is_file($cssPath) ? '?v=' . filemtime($cssPath) : '');
+    $logoUrl = MafasaConfig::getLogoUrl();
+    echo '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">'
+        . '<title>' . $e($title) . '</title><link rel="stylesheet" href="' . $e($cssUrl) . '"></head><body>'
+        . '<div class="mf-print-actions no-print"><button type="button" class="mf-print-btn" onclick="window.print()">' . $e(__('Imprimir / Salvar PDF', 'mafasa')) . '</button>'
+        . '<a class="mf-print-btn mf-print-btn-secondary" href="boards.php?' . $e(http_build_query($_GET)) . '">' . $e(__('Voltar ao relatório', 'mafasa')) . '</a></div>'
+        . '<header class="mf-print-header"><div class="mf-print-brand">'
+        . ($logoUrl !== '' ? '<img class="mf-print-logo" src="' . $e($logoUrl) . '" alt="">' : '<div class="mf-print-logo-fallback">' . $e(MafasaConfig::getHeaderTitle()) . '</div>')
+        . '</div><div class="mf-print-title"><h1>' . $e($title) . '</h1>';
+    foreach ($details as $d) {
+        echo '<div class="mf-print-meta"><span>' . $e($d) . '</span></div>';
+    }
+    echo '</div></header><main>';
+    if (!empty($ent['error'])) {
+        echo '<div class="mf-print-warning" role="alert">' . $e($ent['error']) . '</div>';
+    } elseif ($body === []) {
+        echo '<p class="mf-print-empty">' . $e(__('Nenhum card finalizado nesse período.', 'mafasa')) . '</p>';
+    } else {
+        echo '<table class="mf-print-table"><thead><tr>';
+        foreach ($headers as $i => $hd) {
+            echo '<th' . ($i > 0 ? ' style="text-align:right"' : '') . '>' . $e($hd) . '</th>';
+        }
+        echo '</tr></thead><tbody>';
+        foreach ($body as $line) {
+            echo '<tr>';
+            foreach ($line as $i => $cell) {
+                echo '<td' . ($i > 0 ? ' style="text-align:right"' : '') . '>' . $e($cell) . '</td>';
+            }
+            echo '</tr>';
+        }
+        echo '</tbody><tfoot><tr>';
+        foreach ($foot as $i => $cell) {
+            echo '<th' . ($i > 0 ? ' style="text-align:right"' : '') . '>' . $e($cell) . '</th>';
+        }
+        echo '</tr></tfoot></table>';
+    }
+    echo '</main><footer class="mf-print-footer"><span>' . $e(MafasaConfig::getFooterText()) . '</span></footer></body></html>';
+    return;
+}
 $filters = $report::getFilters();
 $columns = $report::getColumns();
 $defaultCols = $report::getDefaultColumns();
